@@ -6,8 +6,8 @@ import '../providers/yolo_provider.dart';
 import '../widgets/camera_grid.dart';
 import '../widgets/camera_tile.dart';
 import '../widgets/event_list.dart';
+import '../widgets/dashboard_widget.dart';
 
-/// Main layout for the app, including navigation rail and main content area.
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
 
@@ -16,35 +16,50 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0; // 현재 선택된 NavigationRail 인덱스
-  bool isCalendarOpen = false; // 캘린더 팝업 표시 여부
+  int _selectedIndex = 0;
+  bool isCalendarOpen = false;
 
   @override
   void initState() {
     super.initState();
-    // [테스트용] 5초 후 더미 카메라 데이터 추가
-    Future.delayed(const Duration(seconds: 5), () {
+    // 16개 카메라 더미 데이터 추가 (객체 타입 다양화)
+    Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         final provider = Provider.of<YoloProvider>(context, listen: false);
-        provider.addDetection(
-          YoloDetection(
-            camId: '401호',
-            objects: [
-              {'type': 'person', 'bbox': [0.2, 0.3, 0.5, 0.6]},
-              {'type': 'person', 'bbox': [0.4, 0.4, 0.7, 0.8]},
+        for (int i = 1; i <= 16; i++) {
+          List<Map<String, dynamic>> objects = [];
+          String objectType;
+          if (i <= 3) {
+            objectType = 'person';
+          } else if (i == 4) {
+            objectType = 'dog';
+          } else if (i == 5) {
+            objectType = 'cat';
+          } else {
+            final otherTypes = ['car', 'bird', 'bicycle', 'tree', 'motorcycle'];
+            objectType = otherTypes[(i - 6) % otherTypes.length];
+          }
+          objects.add({
+            'type': objectType,
+            'bbox': [
+              0.1 * (i % 3),
+              0.1 * (i % 4),
+              0.3 + 0.05 * (i % 2),
+              0.5 + 0.05 * (i % 2)
             ],
-          ),
-        );
-        // 여러 카메라를 테스트하려면 아래처럼 추가
-        // provider.addDetection(YoloDetection(camId: '402호', objects: [...]));
+          });
+          provider.addDetection(
+            YoloDetection(
+              camId: '${400 + i}호',
+              objects: objects,
+            ),
+          );
+        }
       }
     });
   }
 
-  /// 캘린더 버튼 클릭 시 호출: 캘린더 팝업 열기/닫기
-  void _toggleCalendar() {
-    setState(() => isCalendarOpen = !isCalendarOpen);
-  }
+  void _toggleCalendar() => setState(() => isCalendarOpen = !isCalendarOpen);
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +70,7 @@ class _MainLayoutState extends State<MainLayout> {
         children: [
           Row(
             children: [
-              // 좌측 네비게이션 레일
+              // NavigationRail에서 trailing 사용하지 않음!
               NavigationRail(
                 minWidth: 120,
                 selectedIndex: _selectedIndex,
@@ -63,54 +78,13 @@ class _MainLayoutState extends State<MainLayout> {
                     setState(() => _selectedIndex = index),
                 backgroundColor: const Color(0xFF2A312A),
                 labelType: NavigationRailLabelType.all,
-                // 상단 보안 아이콘
-                leading: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
+                leading: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.0),
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.security, color: Colors.blueGrey[900]),
+                    child: Icon(Icons.security, color: Colors.blueGrey),
                   ),
                 ),
-                // 하단 캘린더 버튼 (PortalTarget으로 팝업 위치 제어)
-                trailing: PortalTarget(
-                  anchor: const Aligned(
-                    follower: Alignment.bottomCenter, // 캘린더 하단을 버튼 상단에 맞춤
-                    target: Alignment.topCenter,
-                    offset: Offset(0, -10), // 버튼과 캘린더 사이 여백
-                  ),
-                  visible: isCalendarOpen,
-                  portalFollower: Material(
-                    elevation: 8,
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 250,
-                      height: 200,
-                      child: TableCalendar(
-                        firstDay: DateTime.utc(2010),
-                        lastDay: DateTime.utc(2030),
-                        focusedDay: DateTime.now(),
-                        headerStyle: const HeaderStyle(
-                          formatButtonVisible: false,
-                          titleCentered: true,
-                        ),
-                        onDaySelected: (_, __) =>
-                            setState(() => isCalendarOpen = false),
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: 25,
-                      child: IconButton(
-                        icon: Icon(Icons.calendar_month, color: Colors.blueGrey[900]),
-                        onPressed: _toggleCalendar,
-                      ),
-                    ),
-                  ),
-                ),
-                // 네비게이션 메뉴
                 destinations: const [
                   NavigationRailDestination(
                     icon: Icon(Icons.videocam),
@@ -130,22 +104,16 @@ class _MainLayoutState extends State<MainLayout> {
               Expanded(
                 child: Column(
                   children: [
-                    // 상단 필터/액션 바
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         children: [
-                          DropdownButton<String>(
+                           DropdownButton<String>(
                             value: '주요시설(작업그룹)',
-                            items: const [
-                              DropdownMenuItem(
-                                value: '주요시설(작업그룹)',
-                                child: Text('주요시설(작업그룹)'),
-                              ),
-                            ],
-                            onChanged: (_) {},
+                            items: [DropdownMenuItem(value: '주요시설(작업그룹)', child: Text('주요시설(작업그룹)'))],
+                            onChanged: null,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           ElevatedButton(
                             onPressed: () {},
                             child: const Text('비디오와 알람'),
@@ -153,11 +121,10 @@ class _MainLayoutState extends State<MainLayout> {
                         ],
                       ),
                     ),
-                    // 메인 컨텐츠 영역 (CCTV/알람/설정)
+                    if (_selectedIndex == 0) const DashboardWidget(),
                     Expanded(
                       child: Row(
                         children: [
-                          // CCTV 그리드
                           if (_selectedIndex == 0)
                             Expanded(
                               flex: 3,
@@ -166,7 +133,6 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: CameraGrid(),
                               ),
                             ),
-                          // 알람 리스트
                           if (_selectedIndex == 1)
                             Expanded(
                               flex: 3,
@@ -175,27 +141,15 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: EventList(),
                               ),
                             ),
-                          // 설정/기타 화면
                           if (_selectedIndex != 0 && _selectedIndex != 1)
-                            Expanded(
+                            const Expanded(
                               flex: 3,
                               child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                  child: Text(
-                                    '설정 화면 ',
-                                    style: TextStyle(fontSize: 24, color: Colors.grey),
-                                  ),
-                                ),
+                                padding: EdgeInsets.all(8.0),
+                                child: Center(child: Text('설정 화면', style: TextStyle(fontSize: 24, color: Colors.grey))),
                               ),
                             ),
-                          // 우측 여백
-                          Expanded(
-                            flex: 1,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                            ),
-                          ),
+                          const Expanded(flex: 1, child: SizedBox()),
                         ],
                       ),
                     ),
@@ -203,6 +157,50 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               ),
             ],
+          ),
+          // 캘린더 버튼만 NavigationRail의 바닥에 고정
+          Positioned(
+            left: 0,
+            bottom: 24, // 레일 바닥에서의 여백 조절
+            child: SizedBox(
+              width: 120, // NavigationRail의 minWidth와 맞춤
+              child: PortalTarget(
+                anchor: const Aligned(
+                  follower: Alignment.bottomCenter,
+                  target: Alignment.topCenter,
+                  offset: Offset(0, -10),
+                ),
+                visible: isCalendarOpen,
+                portalFollower: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 250,
+                    height: 200,
+                    child: TableCalendar(
+                      firstDay: DateTime.utc(2010),
+                      lastDay: DateTime.utc(2030),
+                      focusedDay: DateTime.now(),
+                      headerStyle: const HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                      ),
+                      onDaySelected: (_, __) => setState(() => isCalendarOpen = false),
+                    ),
+                  ),
+                ),
+                child: Center(
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 24,
+                    child: IconButton(
+                      icon: const Icon(Icons.calendar_month, color: Colors.blueGrey),
+                      onPressed: _toggleCalendar,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           // 카메라 확대 팝업 오버레이
           if (yoloProvider.focusedCamId != null)
@@ -221,13 +219,10 @@ class _MainLayoutState extends State<MainLayout> {
                         child: Stack(
                           children: [
                             CameraTile(roomName: yoloProvider.focusedCamId!),
-                            Positioned(
+                            const Positioned(
                               top: 8,
                               right: 8,
-                              child: IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => yoloProvider.clearFocus(),
-                              ),
+                              child: CloseButton(color: Colors.white),
                             ),
                           ],
                         ),

@@ -9,7 +9,6 @@ class YoloDetection {
     required this.objects,
   });
 
-  // JSON 파싱 메서드 추가
   factory YoloDetection.fromJson(Map<String, dynamic> json) {
     return YoloDetection(
       camId: json['camId'] as String,
@@ -35,7 +34,13 @@ class YoloProvider extends ChangeNotifier {
     d.objects.where((o) => o['type'] == 'person').length >= 2
     );
   }
-
+   int countPersonDetections() {
+    int count = 0;
+    for (var detection in _detections) {
+      count += detection.objects.where((obj) => obj['type'] == 'person').length;
+    }
+    return count;
+   }
   void setDialogStatus(bool showing) {
     _isDialogShowing = showing;
     notifyListeners();

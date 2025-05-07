@@ -43,7 +43,7 @@ class CameraGrid extends StatelessWidget {
     } else {
       return GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+          crossAxisCount: 4,
           childAspectRatio: 16 / 9,
         ),
         itemCount: cameras.length,
