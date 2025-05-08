@@ -20,42 +20,90 @@ class _MainLayoutState extends State<MainLayout> {
   bool isCalendarOpen = false;
 
   @override
+  @override
   void initState() {
     super.initState();
 
-    // 더미 데이터 초기화
+    // 초기 더미 데이터 설정 (1초 후)
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         final provider = Provider.of<YoloProvider>(context, listen: false);
 
-        // 모든 카메라 초기화
+        // 모든 카메라 초기화 (객체 없음)
         for (int i = 1; i <= 16; i++) {
           provider.addDetection(
             YoloDetection(
               camId: '${400 + i}호',
-              objects: [],  // 초기에는 객체 없음
+              objects: [], // 빈 객체 리스트로 초기화
             ),
           );
         }
 
-        // 3초 후 404호에 사람 추가 (객체 인지 시작)
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            provider.addDetection(
-              YoloDetection(
-                camId: '404호',
-                objects: [
-                  {'type': 'person', 'bbox': [0.2, 0.2, 0.5, 0.5]},
-                ],
-              ),
-            );
+        // 카메라별 객체 설정
+        // 404호: 사람 (빨간색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '404호',
+            objects: [
+              {'type': 'person', 'bbox': [0.2, 0.2, 0.5, 0.5]},
+            ],
+          ),
+        );
 
-            // 8초 후 객체 인지 종료 (사람 제거)
-            Future.delayed(const Duration(seconds: 8), () {
-              if (mounted) {
-                provider.clearFocus(); // 포커스 제거
-              }
-            });
+        // 405호: 강아지 (파란색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '405호',
+            objects: [
+              {'type': 'dog', 'bbox': [0.3, 0.3, 0.6, 0.6]},
+            ],
+          ),
+        );
+
+        // 406호: 고양이 (녹색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '406호',
+            objects: [
+              {'type': 'cat', 'bbox': [0.25, 0.25, 0.55, 0.55]},
+            ],
+          ),
+        );
+
+        // 407호: 자동차 (주황색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '407호',
+            objects: [
+              {'type': 'car', 'bbox': [0.1, 0.1, 0.7, 0.5]},
+            ],
+          ),
+        );
+
+        // 408호: 새 (보라색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '408호',
+            objects: [
+              {'type': 'bird', 'bbox': [0.4, 0.3, 0.6, 0.45]},
+            ],
+          ),
+        );
+
+        // 410호: 자전거 (청록색)
+        provider.addDetection(
+          YoloDetection(
+            camId: '410호',
+            objects: [
+              {'type': 'bicycle', 'bbox': [0.2, 0.15, 0.8, 0.65]},
+            ],
+          ),
+        );
+
+        // 8초 후 객체 감지 종료 (사람 제거)
+        Future.delayed(const Duration(seconds: 7), () {
+          if (mounted) {
+            provider.clearFocus(); // 포커스 제거
           }
         });
       }

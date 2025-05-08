@@ -44,7 +44,7 @@ class YoloProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 게터로 정의 (괄호 제거)
+  // 게터로 정의
   int get countPersonDetections {
     int count = 0;
     for (var detection in _detections) {
