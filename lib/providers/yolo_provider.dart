@@ -19,43 +19,49 @@ class YoloDetection {
 
 class YoloProvider extends ChangeNotifier {
   List<YoloDetection> _detections = [];
-  bool _isDialogShowing = false;
   String? _focusedCamId;
+  bool _isDialogShowing = false;
 
-  List<String> get cameraIds =>
-      _detections.map((d) => d.camId).toSet().toList();
-
+  // 게터
   List<YoloDetection> get detections => _detections;
-  bool get isDialogShowing => _isDialogShowing;
   String? get focusedCamId => _focusedCamId;
+  bool get isDialogShowing => _isDialogShowing;
 
-  bool get shouldShowAlert {
-    return _detections.any((d) =>
-    d.objects.where((o) => o['type'] == 'person').length >= 2
-    );
-  }
-   int countPersonDetections() {
-    int count = 0;
-    for (var detection in _detections) {
-      count += detection.objects.where((obj) => obj['type'] == 'person').length;
-    }
-    return count;
-   }
-  void setDialogStatus(bool showing) {
-    _isDialogShowing = showing;
-    notifyListeners();
-  }
+  // 새로운 cameraIds 게터 추가
+  List<String> get cameraIds => _detections
+      .map((detection) => detection.camId)
+      .toSet() // 중복 제거
+      .toList();
 
+  // 사람만 감지되었을 때 포커스
   void addDetection(YoloDetection detection) {
     _detections = [..._detections, detection];
+
+    // 사람이 감지된 카메라만 포커스
     if (detection.objects.any((o) => o['type'] == 'person')) {
       _focusedCamId = detection.camId;
     }
     notifyListeners();
   }
 
+  // 게터로 정의 (괄호 제거)
+  int get countPersonDetections {
+    int count = 0;
+    for (var detection in _detections) {
+      count += detection.objects.where((o) => o['type'] == 'person').length;
+    }
+    return count;
+  }
+
+
+
   void clearFocus() {
     _focusedCamId = null;
+    notifyListeners();
+  }
+
+  void setDialogStatus(bool showing) {
+    _isDialogShowing = showing;
     notifyListeners();
   }
 

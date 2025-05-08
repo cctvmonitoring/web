@@ -10,7 +10,7 @@ class DashboardWidget extends StatelessWidget {
     final yoloProvider = Provider.of<YoloProvider>(context);
     final totalEvents = yoloProvider.detections.length;
     final cameraCount = yoloProvider.cameraIds.length;
-    final personCount = yoloProvider.countPersonDetections();
+    final personCount = yoloProvider.countPersonDetections;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
