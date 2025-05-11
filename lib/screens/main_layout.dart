@@ -18,7 +18,6 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0; // 현재 선택된 NavigationRail 인덱스
-  bool isCalendarOpen = false; // 캘린더 팝업 표시 여부
 
   @override
   void initState() {
@@ -42,9 +41,62 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
-  /// 캘린더 버튼 클릭 시 호출: 캘린더 팝업 열기/닫기
-  void _toggleCalendar() {
-    setState(() => isCalendarOpen = !isCalendarOpen);
+  /// 캘린더 모달을 열기 위한 메서드
+  void _showCalendarModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8, // 화면 크기에 맞게 너비 조정
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TableCalendar(
+                  firstDay: DateTime.utc(2010),
+                  lastDay: DateTime.utc(2030),
+                  focusedDay: DateTime.now(),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  calendarStyle: const CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    outsideDaysVisible: false,
+                  ),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    // 날짜 선택 시 동작 추가 가능
+                    Navigator.of(context).pop(); // 모달 닫기
+                  },
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // 닫기 버튼
+                  },
+                  child: const Text('닫기'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -54,7 +106,6 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('CCTV 관리'),
-        // 우측 상단 톱니바퀴 제거
       ),
       body: Stack(
         children: [
@@ -68,7 +119,6 @@ class _MainLayoutState extends State<MainLayout> {
                     setState(() => _selectedIndex = index),
                 backgroundColor: const Color(0xFF2A312A),
                 labelType: NavigationRailLabelType.all,
-                // 상단 보안 아이콘
                 leading: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20.0),
                   child: CircleAvatar(
@@ -76,46 +126,17 @@ class _MainLayoutState extends State<MainLayout> {
                     child: Icon(Icons.security, color: Colors.blueGrey[900]),
                   ),
                 ),
-                // 하단 캘린더 버튼 (PortalTarget으로 팝업 위치 제어)
-                trailing: PortalTarget(
-                  anchor: const Aligned(
-                    follower: Alignment.bottomCenter, // 캘린더 하단을 버튼 상단에 맞춤
-                    target: Alignment.topCenter,
-                    offset: Offset(0, -10), // 버튼과 캘린더 사이 여백
-                  ),
-                  visible: isCalendarOpen,
-                  portalFollower: Material(
-                    elevation: 8,
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: 250,
-                      height: 200,
-                      child: TableCalendar(
-                        firstDay: DateTime.utc(2010),
-                        lastDay: DateTime.utc(2030),
-                        focusedDay: DateTime.now(),
-                        headerStyle: const HeaderStyle(
-                          formatButtonVisible: false,
-                          titleCentered: true,
-                        ),
-                        onDaySelected: (_, __) =>
-                            setState(() => isCalendarOpen = false),
-                      ),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: 25,
-                      child: IconButton(
-                        icon: Icon(Icons.calendar_month, color: Colors.blueGrey[900]),
-                        onPressed: _toggleCalendar,
-                      ),
+                trailing: Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 25,
+                    child: IconButton(
+                      icon: Icon(Icons.calendar_month, color: Colors.blueGrey[900]),
+                      onPressed: () => _showCalendarModal(context),
                     ),
                   ),
                 ),
-                // 네비게이션 메뉴
                 destinations: const [
                   NavigationRailDestination(
                     icon: Icon(Icons.videocam),
@@ -135,7 +156,6 @@ class _MainLayoutState extends State<MainLayout> {
               Expanded(
                 child: Column(
                   children: [
-                    // 상단 필터/액션 바
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
@@ -158,11 +178,9 @@ class _MainLayoutState extends State<MainLayout> {
                         ],
                       ),
                     ),
-                    // 메인 컨텐츠 영역 (CCTV/알람/설정)
                     Expanded(
                       child: Row(
                         children: [
-                          // CCTV 그리드
                           if (_selectedIndex == 0)
                             Expanded(
                               flex: 3,
@@ -171,7 +189,6 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: CameraGrid(),
                               ),
                             ),
-                          // 알람 리스트
                           if (_selectedIndex == 1)
                             Expanded(
                               flex: 3,
@@ -180,7 +197,6 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: EventList(),
                               ),
                             ),
-                          // 설정 화면
                           if (_selectedIndex == 2)
                             Expanded(
                               flex: 3,
@@ -189,7 +205,6 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: const SettingsWidget(),
                               ),
                             ),
-                          // 우측 여백
                           Expanded(
                             flex: 1,
                             child: Padding(
@@ -204,7 +219,6 @@ class _MainLayoutState extends State<MainLayout> {
               ),
             ],
           ),
-          // 카메라 확대 팝업 오버레이
           if (yoloProvider.focusedCamId != null)
             Positioned.fill(
               child: GestureDetector(
