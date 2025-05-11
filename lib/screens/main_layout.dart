@@ -6,6 +6,7 @@ import '../providers/yolo_provider.dart';
 import '../widgets/camera_grid.dart';
 import '../widgets/camera_tile.dart';
 import '../widgets/event_list.dart';
+import '../widgets/settings_widget.dart'; // SettingsWidget import 추가
 
 /// Main layout for the app, including navigation rail and main content area.
 class MainLayout extends StatefulWidget {
@@ -51,6 +52,10 @@ class _MainLayoutState extends State<MainLayout> {
     final yoloProvider = Provider.of<YoloProvider>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('CCTV 관리'),
+        // 우측 상단 톱니바퀴 제거
+      ),
       body: Stack(
         children: [
           Row(
@@ -175,18 +180,13 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: EventList(),
                               ),
                             ),
-                          // 설정/기타 화면
-                          if (_selectedIndex != 0 && _selectedIndex != 1)
+                          // 설정 화면
+                          if (_selectedIndex == 2)
                             Expanded(
                               flex: 3,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                  child: Text(
-                                    '설정 화면 ',
-                                    style: TextStyle(fontSize: 24, color: Colors.grey),
-                                  ),
-                                ),
+                                child: const SettingsWidget(),
                               ),
                             ),
                           // 우측 여백
@@ -242,3 +242,4 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 }
+
