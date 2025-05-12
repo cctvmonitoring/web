@@ -2,6 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/yolo_provider.dart';
 
+const Map<String, Color> objectBoxColors = {
+  'person': Colors.red,
+  'dog': Colors.blue,
+  'cat': Colors.green,
+  'car': Colors.orange,
+  'bird': Colors.purple,
+  'bicycle': Colors.teal,
+  'tree': Colors.brown,
+  'motorcycle': Colors.pink,
+};
+
 class CameraTile extends StatelessWidget {
   final String roomName;
   final bool isAlert;
@@ -29,7 +40,6 @@ class CameraTile extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              // CCTV 영상 플레이스홀더
               Positioned.fill(
                 child: Container(
                   color: Colors.black,
@@ -38,10 +48,11 @@ class CameraTile extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // 객체 인식 결과 오버레이 (수정된 부분)
+              // 객체 인식 결과 오버레이 (타입별 색상 적용)
               ...detections.map((obj) {
                 final bbox = obj['bbox'] as List<dynamic>;
+                final type = obj['type'] as String;
+                final color = objectBoxColors[type] ?? Colors.grey;
                 return Positioned(
                   left: tileWidth * bbox[0],
                   top: tileHeight * bbox[1],
@@ -49,19 +60,18 @@ class CameraTile extends StatelessWidget {
                   height: tileHeight * (bbox[3] - bbox[1]),
                   child: Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.red, width: 2),
+                      border: Border.all(color: color, width: 2),
                     ),
                     child: Text(
-                      obj['type'],
-                      style: const TextStyle(
+                      type,
+                      style: TextStyle(
                         color: Colors.white,
-                        backgroundColor: Colors.red,
+                        backgroundColor: color,
                       ),
                     ),
                   ),
                 );
               }),
-
               // 상단 라벨
               Positioned(
                 top: 8,
@@ -81,7 +91,6 @@ class CameraTile extends StatelessWidget {
                   ),
                 ),
               ),
-
               // 경고 표시
               if (isAlert)
                 const Positioned(
