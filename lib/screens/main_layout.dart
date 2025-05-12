@@ -6,7 +6,9 @@ import '../providers/yolo_provider.dart';
 import '../widgets/camera_grid.dart';
 import '../widgets/camera_tile.dart';
 import '../widgets/event_list.dart';
+import '../widgets/settings_widget.dart'; // SettingsWidget import 추가
 import '../widgets/dashboard_widget.dart';
+
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -16,8 +18,8 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0;
-  bool isCalendarOpen = false;
+  int _selectedIndex = 0; // 현재 선택된 NavigationRail 인덱스
+
 
   @override
   void initState() {
@@ -97,13 +99,73 @@ class _MainLayoutState extends State<MainLayout> {
     });
   }
 
-  void _toggleCalendar() => setState(() => isCalendarOpen = !isCalendarOpen);
+  /// 캘린더 모달을 열기 위한 메서드
+  void _showCalendarModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8, // 화면 크기에 맞게 너비 조정
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TableCalendar(
+                  firstDay: DateTime.utc(2010),
+                  lastDay: DateTime.utc(2030),
+                  focusedDay: DateTime.now(),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  calendarStyle: const CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    outsideDaysVisible: false,
+                  ),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    // 날짜 선택 시 동작 추가 가능
+                    Navigator.of(context).pop(); // 모달 닫기
+                  },
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // 닫기 버튼
+                  },
+                  child: const Text('닫기'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final yoloProvider = Provider.of<YoloProvider>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('CCTV 관리'),
+      ),
       body: Stack(
         children: [
           Row(
@@ -115,12 +177,23 @@ class _MainLayoutState extends State<MainLayout> {
                     setState(() => _selectedIndex = index),
                 backgroundColor: const Color(0xFF2A312A),
                 labelType: NavigationRailLabelType.all,
-                leading: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20.0),
+               leading: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20.0),
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.security, color: Colors.blueGrey),
+                    child: Icon(Icons.security, color: Colors.blueGrey[900]),
                   ),
+                ),
+                trailing: Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.white,
+                    radius: 25,
+                    child: IconButton(
+                      icon: Icon(Icons.calendar_month, color: Colors.blueGrey[900]),
+                      onPressed: () => _showCalendarModal(context),
+                    ),
+
                 ),
                 destinations: const [
                   NavigationRailDestination(
@@ -140,7 +213,8 @@ class _MainLayoutState extends State<MainLayout> {
               Expanded(
                 child: Column(
                   children: [
-                    const DashboardWidget(),
+
+
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
@@ -164,34 +238,55 @@ class _MainLayoutState extends State<MainLayout> {
                       ),
                     ),
                     Expanded(
-                      child: _buildMainContent(yoloProvider),
+
+                      child: Row(
+                        children: [
+                          if (_selectedIndex == 0)
+                            Expanded(
+                              flex: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: CameraGrid(),
+                              ),
+                            ),
+                          if (_selectedIndex == 1)
+                            Expanded(
+                              flex: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: EventList(),
+                              ),
+                            ),
+                          if (_selectedIndex == 2)
+                            Expanded(
+                              flex: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: const SettingsWidget(),
+                              ),
+                            ),
+                          Expanded(
+                            flex: 1,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          // 캘린더 버튼 및 캘린더 오버레이
-          Positioned(
-            left: 0,
-            bottom: 24,
-            child: SizedBox(
-              width: 120,
-              child: PortalTarget(
-                anchor: const Aligned(
-                  follower: Alignment.bottomCenter, // 캘린더 정렬 기준 (버튼 하단)
-                  target: Alignment.topCenter,       // 캘린더 위치 기준 (버튼 상단)
-                  offset: const Offset(60, -10),     // x: 오른쪽 60px, y: 위로 10px
-                ),
-                visible: isCalendarOpen,
-                portalFollower: Builder(
-                  builder: (context) {
-                    final screenHeight = MediaQuery.of(context).size.height;
-                    // 화면 상단 여유 공간 확보 (상단 네비게이션바 고려)
-                    final maxHeight = screenHeight - 200;
-                    final calendarHeight = maxHeight < 300 ? maxHeight : 300.0;
-
-                    return Material(
+          if (yoloProvider.focusedCamId != null)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => yoloProvider.clearFocus(),
+                child: Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Material(
                       elevation: 8,
                       borderRadius: BorderRadius.circular(12),
                       child: SizedBox(
@@ -377,3 +472,4 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 }
+
