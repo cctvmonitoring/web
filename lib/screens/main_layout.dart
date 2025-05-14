@@ -7,6 +7,9 @@ import '../widgets/camera_grid.dart';
 import '../widgets/camera_tile.dart';
 import '../widgets/event_list.dart';
 import '../widgets/history_list.dart';
+import '../widgets/settings_widget.dart';
+import '../widgets/dashboard_widget.dart';
+
 
 /// CCTV 메인 레이아웃 화면 (NavigationRail + 메인 컨텐츠)
 class MainLayout extends StatefulWidget {
@@ -152,14 +155,16 @@ class _MainLayoutState extends State<MainLayout> {
                     outsideDaysVisible: false,
                   ),
                   onDaySelected: (selectedDay, focusedDay) {
-                    // 날짜 선택 시 모달 닫기
-                    Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => History(selectedDate: selectedDay),
-                      ),
-                    );
-                  },
+                  // 날짜 선택 시 모달 닫기
+                   Navigator.of(context).pop();
+                  // History 화면으로 이동 
+                   Navigator.of(context).push(
+                   MaterialPageRoute(
+                    builder: (context) => History(selectedDate: selectedDay),
+    ),
+  );
+},
+
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -293,6 +298,7 @@ class _MainLayoutState extends State<MainLayout> {
                               flex: 3,
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
+                                child: SettingsWidget(),
                               ),
                             ),
                           // 우측 빈 공간 (레이아웃 정렬용)
