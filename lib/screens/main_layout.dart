@@ -6,8 +6,10 @@ import '../providers/yolo_provider.dart';
 import '../widgets/camera_grid.dart';
 import '../widgets/camera_tile.dart';
 import '../widgets/event_list.dart';
+import '../widgets/history_list.dart';
 import '../widgets/settings_widget.dart';
 import '../widgets/dashboard_widget.dart';
+
 
 /// CCTV 메인 레이아웃 화면 (NavigationRail + 메인 컨텐츠)
 class MainLayout extends StatefulWidget {
@@ -153,9 +155,16 @@ class _MainLayoutState extends State<MainLayout> {
                     outsideDaysVisible: false,
                   ),
                   onDaySelected: (selectedDay, focusedDay) {
-                    // 날짜 선택 시 모달 닫기
-                    Navigator.of(context).pop();
-                  },
+                  // 날짜 선택 시 모달 닫기
+                   Navigator.of(context).pop();
+                  // History 화면으로 이동 
+                   Navigator.of(context).push(
+                   MaterialPageRoute(
+                    builder: (context) => History(selectedDate: selectedDay),
+    ),
+  );
+},
+
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
