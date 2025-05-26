@@ -9,6 +9,7 @@ import '../widgets/event_list.dart';
 import '../widgets/history_list.dart';
 import '../widgets/settings_widget.dart';
 import '../widgets/dashboard_widget.dart';
+import '../widgets/alarm_demo_widget.dart';
 
 
 /// CCTV 메인 레이아웃 화면 (NavigationRail + 메인 컨텐츠)
@@ -223,10 +224,14 @@ class _MainLayoutState extends State<MainLayout> {
                     label: Text('알람', style: TextStyle(color: Colors.white)),
                   ),
                   NavigationRailDestination(
+                    icon: Icon(Icons.dashboard),
+                    label: Text('대시보드', style: TextStyle(color: Colors.white)),
+                  ),
+                  NavigationRailDestination(
                     icon: Icon(Icons.settings),
                     label: Text('설정', style: TextStyle(color: Colors.white)),
                   ),
-                ],
+                  ],
                 // 캘린더 버튼을 NavigationRail 맨 하단에 고정
                 trailing: Align(
                   alignment: Alignment.bottomCenter,
@@ -292,8 +297,16 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: EventList(),
                               ),
                             ),
-                          // 설정 화면
                           if (_selectedIndex == 2)
+                            Expanded(
+                              flex: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: DashboardWidget(),
+                              ),
+                            ),
+                          // 설정 화면
+                          if (_selectedIndex == 3)
                             Expanded(
                               flex: 3,
                               child: Padding(
@@ -301,6 +314,7 @@ class _MainLayoutState extends State<MainLayout> {
                                 child: SettingsWidget(),
                               ),
                             ),
+
                           // 우측 빈 공간 (레이아웃 정렬용)
                           Expanded(
                             flex: 1,
@@ -315,42 +329,43 @@ class _MainLayoutState extends State<MainLayout> {
                   ],
                 ),
               ),
+              const AlarmDemoWidget(),
             ],
           ),
           // 사람이 감지된 카메라가 있으면 팝업 오버레이로 확대 표시
-          if (yoloProvider.focusedCamId != null)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => yoloProvider.clearFocus(),
-                child: Container(
-                  color: Colors.black54,
-                  child: Center(
-                    child: Material(
-                      elevation: 8,
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        width: 250,
-                        height: calendarHeight,
-                        child: SingleChildScrollView(
-                          child: TableCalendar(
-                            firstDay: DateTime.utc(2010),
-                            lastDay: DateTime.utc(2030),
-                            focusedDay: DateTime.now(),
-                            headerStyle: const HeaderStyle(
-                              formatButtonVisible: false,
-                              titleCentered: true,
-                            ),
-                            onDaySelected: (selectedDay, focusedDay) {
-                              setState(() => isCalendarOpen = false);
-                            },
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // if (yoloProvider.focusedCamId != null)
+          //   Positioned.fill(
+          //     child: GestureDetector(
+          //       onTap: () => yoloProvider.clearFocus(),
+          //       child: Container(
+          //         color: Colors.black54,
+          //         child: Center(
+          //           child: Material(
+          //             elevation: 8,
+          //             borderRadius: BorderRadius.circular(12),
+          //             child: SizedBox(
+          //               width: 250,
+          //               height: calendarHeight,
+          //               child: SingleChildScrollView(
+          //                 child: TableCalendar(
+          //                   firstDay: DateTime.utc(2010),
+          //                   lastDay: DateTime.utc(2030),
+          //                   focusedDay: DateTime.now(),
+          //                   headerStyle: const HeaderStyle(
+          //                     formatButtonVisible: false,
+          //                     titleCentered: true,
+          //                   ),
+          //                   onDaySelected: (selectedDay, focusedDay) {
+          //                     setState(() => isCalendarOpen = false);
+          //                   },
+          //                 ),
+          //               ),
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );
