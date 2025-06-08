@@ -14,12 +14,8 @@ void main() {
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => CameraProvider()),
           ChangeNotifierProvider(create: (_) => YoloProvider()),
-
         ],
-        child: MaterialApp(
-          home: MainLayout(),
-          debugShowCheckedModeBanner: false,
-        ),
+        child: const MyApp(),
       ),
     ),
   );
@@ -47,7 +43,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             brightness: Brightness.dark,
           ),
-          themeMode: themeProvider.themeMode, // 여기서 동적으로 반영!
+          themeMode: themeProvider.themeMode,
           home: const MainLayout(),
           debugShowCheckedModeBanner: false,
         );

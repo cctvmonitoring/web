@@ -42,36 +42,172 @@ class DashboardWidget extends StatelessWidget {
     final personCount = yoloProvider.countPersonDetections;
 
     return SingleChildScrollView(
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('실시간 보안 현황',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
+        children: [
+          // 실시간 모니터링 섹션
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatItem('활성 카메라', '$cameraCount대'),
-                  _buildStatItem('오늘 이벤트', '$totalEvents건'),
-                  _buildStatItem('중요 경고', '$personCount건'),
+                  const Text(
+                    '실시간 모니터링',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    children: [
+                      _buildStatusCard(
+                        '카메라 상태',
+                        Icons.videocam,
+                        '${yoloProvider.detections.length}대 연결됨',
+                        Colors.blue,
+                        [
+                          _buildStatusItem('정상', 8),
+                          _buildStatusItem('점검중', 2),
+                          _buildStatusItem('오프라인', 1),
+                        ],
+                      ),
+                      _buildStatusCard(
+                        '객체 감지',
+                        Icons.person_search,
+                        '${_countTotalDetections(yoloProvider)}개 감지됨',
+                        Colors.green,
+                        [
+                          _buildStatusItem('사람', _countDetectionsByType(yoloProvider, 'person')),
+                          _buildStatusItem('차량', _countDetectionsByType(yoloProvider, 'car')),
+                          _buildStatusItem('기타', _countDetectionsByType(yoloProvider, 'other')),
+                        ],
+                      ),
+                      _buildStatusCard(
+                        '알림 현황',
+                        Icons.notifications_active,
+                        '${_countActiveAlerts(yoloProvider)}개 활성화됨',
+                        Colors.orange,
+                        [
+                          _buildStatusItem('긴급', 2),
+                          _buildStatusItem('경고', 3),
+                          _buildStatusItem('정보', 5),
+                        ],
+                      ),
+                      _buildStatusCard(
+                        '시스템 리소스',
+                        Icons.memory,
+                        '정상 작동중',
+                        Colors.purple,
+                        [
+                          _buildStatusItem('CPU', '45%'),
+                          _buildStatusItem('메모리', '60%'),
+                          _buildStatusItem('저장공간', '75%'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 32),
-              const Text('시간대별 이벤트 발생',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 250,
-                child: _buildHourlyEventsChart(hourlyEvents),
-              ),
-            ],
+            ),
           ),
+          // 기존 통계 섹션
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('실시간 보안 현황',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem('활성 카메라', '$cameraCount대'),
+                      _buildStatItem('오늘 이벤트', '$totalEvents건'),
+                      _buildStatItem('중요 경고', '$personCount건'),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const Text('시간대별 이벤트 발생',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 250,
+                    child: _buildHourlyEventsChart(hourlyEvents),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(
+    String title,
+    IconData icon,
+    String subtitle,
+    Color color,
+    List<Widget> statusItems,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...statusItems,
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusItem(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(
+            value.toString(),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -83,9 +219,9 @@ class DashboardWidget extends StatelessWidget {
         const SizedBox(height: 4),
         Text(value,
             style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueGrey
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueGrey
             )),
       ],
     );
@@ -137,5 +273,23 @@ class DashboardWidget extends StatelessWidget {
         gridData: FlGridData(show: true),
       ),
     );
+  }
+
+  int _countTotalDetections(YoloProvider provider) {
+    return provider.detections.fold(
+      0,
+      (sum, detection) => sum + detection.objects.length,
+    );
+  }
+
+  int _countDetectionsByType(YoloProvider provider, String type) {
+    return provider.detections.fold(
+      0,
+      (sum, detection) => sum + detection.objects.where((obj) => obj['type'] == type).length,
+    );
+  }
+
+  int _countActiveAlerts(YoloProvider provider) {
+    return provider.detections.where((d) => d.objects.isNotEmpty).length;
   }
 }

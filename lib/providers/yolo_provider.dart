@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class YoloDetection {
   final String camId;
@@ -17,14 +18,14 @@ class YoloDetection {
   }
 }
 
-class YoloProvider extends ChangeNotifier {
+class YoloProvider with ChangeNotifier {
   List<YoloDetection> _detections = [];
-  String? _focusedCamId;
+  String? _focusedCamera;
   bool _isDialogShowing = false;
 
   // 게터
   List<YoloDetection> get detections => _detections;
-  String? get focusedCamId => _focusedCamId;
+  String? get focusedCamera => _focusedCamera;
   bool get isDialogShowing => _isDialogShowing;
 
   // 새로운 cameraIds 게터 추가
@@ -35,11 +36,11 @@ class YoloProvider extends ChangeNotifier {
 
   // 사람만 감지되었을 때 포커스
   void addDetection(YoloDetection detection) {
-    _detections = [..._detections, detection];
-
-    // 사람이 감지된 카메라만 포커스
-    if (detection.objects.any((o) => o['type'] == 'person')) {
-      _focusedCamId = detection.camId;
+    final index = _detections.indexWhere((d) => d.camId == detection.camId);
+    if (index != -1) {
+      _detections[index] = detection;
+    } else {
+      _detections.add(detection);
     }
     notifyListeners();
   }
@@ -53,10 +54,13 @@ class YoloProvider extends ChangeNotifier {
     return count;
   }
 
-
+  void setFocus(String? camId) {
+    _focusedCamera = camId;
+    notifyListeners();
+  }
 
   void clearFocus() {
-    _focusedCamId = null;
+    _focusedCamera = null;
     notifyListeners();
   }
 

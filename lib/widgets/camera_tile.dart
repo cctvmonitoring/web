@@ -16,14 +16,30 @@ const Map<String, Color> objectBoxColors = {
 class CameraTile extends StatelessWidget {
   final String roomName;
   final bool isAlert;
+  final bool isFocused;
 
-  const CameraTile({required this.roomName, this.isAlert = false, super.key});
+  const CameraTile({
+    super.key,
+    required this.roomName,
+    this.isAlert = false,
+    this.isFocused = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final detections = context.select<YoloProvider, List<Map<String, dynamic>>>(
           (provider) => provider.getLatestDetections(roomName),
     );
+
+    // 사람이 감지되었는지 확인
+    final hasPerson = detections.any((obj) => obj['type'] == 'person');
+    
+    // 사람이 감지되면 포커스 설정
+    if (hasPerson) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<YoloProvider>(context, listen: false).setFocus(roomName);
+      });
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -32,19 +48,24 @@ class CameraTile extends StatelessWidget {
 
         return Container(
           decoration: BoxDecoration(
-            border: Border.all(
-              color: isAlert ? Colors.red : Colors.grey[700]!,
-              width: isAlert ? 3 : 1,
-            ),
+            color: Colors.grey[900],
             borderRadius: BorderRadius.circular(8),
+            border: isAlert
+                ? Border.all(color: Colors.red, width: 2)
+                : isFocused
+                    ? Border.all(color: Colors.blue, width: 2)
+                    : null,
           ),
           child: Stack(
             children: [
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black,
-                  child: const Center(
-                    child: Icon(Icons.videocam, color: Colors.white54, size: 48),
+              // 카메라 영상 (임시로 회색 배경)
+              Container(
+                color: Colors.grey[800],
+                child: const Center(
+                  child: Icon(
+                    Icons.videocam,
+                    size: 48,
+                    color: Colors.white54,
                   ),
                 ),
               ),
@@ -72,21 +93,25 @@ class CameraTile extends StatelessWidget {
                   ),
                 );
               }),
-              // 상단 라벨
+              // 카메라 정보
               Positioned(
-                top: 8,
-                left: 8,
+                bottom: 0,
+                left: 0,
+                right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.black54,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(8),
+                      bottomRight: Radius.circular(8),
+                    ),
                   ),
                   child: Text(
                     roomName,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
                 ),

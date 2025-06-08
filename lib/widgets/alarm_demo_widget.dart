@@ -43,54 +43,11 @@ class DummyEvent {
 }
 
 // 알람 데모 위젯
-class AlarmDemoWidget extends StatefulWidget {
+class AlarmDemoWidget extends StatelessWidget {
   const AlarmDemoWidget({super.key});
 
   @override
-  State<AlarmDemoWidget> createState() => _AlarmDemoWidgetState();
-}
-
-class _AlarmDemoWidgetState extends State<AlarmDemoWidget> {
-  bool _hasShownEvent = false; // 최초 자동 팝업 제어
-
-  // 객체 인지 이벤트(더미) 발생 함수
-  void triggerDetectionEvent() {
-    final event = DummyEvent(
-      cameraId: 'cam401',
-      message: '401호에서 이상행동 감지!',
-    );
-    _showCameraModal(event);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // 앱 실행 후 12초 뒤에 한 번만 자동 팝업
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 12), () {
-        if (!_hasShownEvent) {
-          _hasShownEvent = true;
-          triggerDetectionEvent();
-        }
-      });
-    });
-  }
-
-  // 카메라 확대 모달(팝업)
-  void _showCameraModal(DummyEvent event) {
-    showDialog(
-      context: context,
-      barrierDismissible: true, // 바깥 클릭 시 닫힘
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: CameraView(cameraId: event.cameraId),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // 버튼 없이 빈 위젯만 반환
     return const SizedBox.shrink();
   }
 }

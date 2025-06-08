@@ -10,7 +10,9 @@ import '../widgets/history_list.dart';
 import '../widgets/settings_widget.dart';
 import '../widgets/dashboard_widget.dart';
 import '../widgets/alarm_demo_widget.dart';
-
+import '../widgets/map_view.dart';
+import '../widgets/analytics_view.dart';
+import '../widgets/management_view.dart';
 
 /// CCTV 메인 레이아웃 화면 (NavigationRail + 메인 컨텐츠)
 class MainLayout extends StatefulWidget {
@@ -21,7 +23,8 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  // 현재 선택된 NavigationRail 인덱스 (0: CCTV, 1: 알람, 2: 설정)
+  // 현재 선택된 NavigationRail 인덱스
+  // 0: CCTV, 1: 알람, 2: 대시보드, 3: 지도, 4: 분석, 5: 관리, 6: 설정
   int _selectedIndex = 0;
 
   // 캘린더 모달 높이
@@ -29,6 +32,21 @@ class _MainLayoutState extends State<MainLayout> {
 
   // 캘린더 모달 열림 여부
   bool isCalendarOpen = false;
+
+  // 시스템 상태 정보
+  final Map<String, String> _systemStatus = {
+    '서버': '정상',
+    '네트워크': '정상',
+    '카메라': '정상',
+    '저장공간': '정상',
+  };
+
+  // 날씨 정보
+  final Map<String, dynamic> _weatherInfo = {
+    'condition': '맑음',
+    'temperature': 23,
+    'humidity': 45,
+  };
 
   /// 캘린더 버튼 클릭 시 열림/닫힘 토글
   void _toggleCalendar() {
@@ -41,8 +59,8 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
-    // 앱 시작 1초 후 더미 카메라 데이터 및 객체 감지 데이터 셋업
-    Future.delayed(const Duration(seconds: 1), () {
+    // 앱 시작 3초 후 더미 카메라 데이터 및 객체 감지 데이터 셋업
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         final provider = Provider.of<YoloProvider>(context, listen: false);
 
@@ -156,16 +174,15 @@ class _MainLayoutState extends State<MainLayout> {
                     outsideDaysVisible: false,
                   ),
                   onDaySelected: (selectedDay, focusedDay) {
-                  // 날짜 선택 시 모달 닫기
-                   Navigator.of(context).pop();
-                  // History 화면으로 이동 
-                   Navigator.of(context).push(
-                   MaterialPageRoute(
-                    builder: (context) => History(selectedDate: selectedDay),
-    ),
-  );
-},
-
+                    // 날짜 선택 시 모달 닫기
+                    Navigator.of(context).pop();
+                    // History 화면으로 이동 
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => History(selectedDate: selectedDay),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -185,208 +202,236 @@ class _MainLayoutState extends State<MainLayout> {
   /// 메인 빌드 함수
   @override
   Widget build(BuildContext context) {
-    // 객체 감지/포커스 등 상태 관리용 Provider
     final yoloProvider = Provider.of<YoloProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('CCTV 관리'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          '보안관제 시스템',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        elevation: 0,
       ),
-      body: Stack(
+      body: Row(
         children: [
-          // 좌측 NavigationRail + 우측 메인 컨텐츠
-          Row(
-            children: [
-              // 좌측 NavigationRail (네비/설정/캘린더)
-              NavigationRail(
-                minWidth: 120,
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (int index) =>
-                    setState(() => _selectedIndex = index),
-                backgroundColor: const Color(0xFF2A312A),
-                labelType: NavigationRailLabelType.all,
-                // 상단 보안 아이콘
-                leading: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20.0),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.security, color: Colors.blueGrey[900]),
-                  ),
-                ),
-                // 네비게이션 메뉴 (CCTV/알람/설정)
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.videocam),
-                    label: Text('CCTV', style: TextStyle(color: Colors.white)),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.notifications),
-                    label: Text('알람', style: TextStyle(color: Colors.white)),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.dashboard),
-                    label: Text('대시보드', style: TextStyle(color: Colors.white)),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.settings),
-                    label: Text('설정', style: TextStyle(color: Colors.white)),
-                  ),
-                  ],
-                // 캘린더 버튼을 NavigationRail 맨 하단에 고정
-                trailing: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 24.0),
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      radius: 25,
-                      child: IconButton(
-                        icon: Icon(Icons.calendar_month, color: Colors.blueGrey[900]),
-                        onPressed: () => _showCalendarModal(context),
-                      ),
-                    ),
+          NavigationRail(
+            minWidth: 120,
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (int index) =>
+                setState(() => _selectedIndex = index),
+            backgroundColor: const Color(0xFF1A1A1A),
+            labelType: NavigationRailLabelType.all,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20.0),
+              child: CircleAvatar(
+                backgroundColor: const Color(0xFF2C2C2C),
+                child: Icon(Icons.security, color: Colors.grey[400]),
+              ),
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.videocam_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.videocam, color: Colors.white),
+                label: Text('CCTV', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.notifications_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.notifications, color: Colors.white),
+                label: Text('알람', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.dashboard, color: Colors.white),
+                label: Text('대시보드', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.map_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.map, color: Colors.white),
+                label: Text('지도', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.analytics_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.analytics, color: Colors.white),
+                label: Text('분석', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.admin_panel_settings_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.admin_panel_settings, color: Colors.white),
+                label: Text('관리', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.settings, color: Colors.white),
+                label: Text('설정', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+            trailing: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: CircleAvatar(
+                  backgroundColor: const Color(0xFF2C2C2C),
+                  radius: 25,
+                  child: IconButton(
+                    icon: Icon(Icons.calendar_month, color: Colors.grey[400]),
+                    onPressed: () => _showCalendarModal(context),
                   ),
                 ),
               ),
-              // 우측 메인 컨텐츠 영역
-              Expanded(
-                child: Column(
-                  children: [
-                    // 상단 필터/버튼 영역
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          DropdownButton(
+            ),
+          ),
+          Expanded(
+            child: Container(
+              color: const Color(0xFF2C2C2C),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[800]!),
+                          ),
+                          child: DropdownButton(
                             value: '주요시설(작업그룹)',
                             items: const [
                               DropdownMenuItem(
                                 value: '주요시설(작업그룹)',
-                                child: Text('주요시설(작업그룹)'),
+                                child: Text(
+                                  '주요시설(작업그룹)',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                             ],
                             onChanged: (_) {},
+                            dropdownColor: const Color(0xFF1A1A1A),
+                            underline: const SizedBox(),
+                            icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
                           ),
-                          const SizedBox(width: 16),
-                          ElevatedButton(
+                        ),
+                        const SizedBox(width: 16),
+                        Container(
+                          height: 48,
+                          child: ElevatedButton(
                             onPressed: () {},
-                            child: const Text('비디오와 알람'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1A1A1A),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Colors.grey[800]!),
+                              ),
+                            ),
+                            child: const Text(
+                              '비디오와 알람',
+                              style: TextStyle(
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    // 실제 CCTV/알람/설정 화면
-                    Expanded(
-                      child: Row(
-                        children: [
-                          // CCTV 화면
-                          if (_selectedIndex == 0)
-                            Expanded(
-                              flex: 3,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: CameraGrid(),
-                              ),
-                            ),
-                          // 알람 화면
-                          if (_selectedIndex == 1)
-                            Expanded(
-                              flex: 3,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: EventList(),
-                              ),
-                            ),
-                          if (_selectedIndex == 2)
-                            Expanded(
-                              flex: 3,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: DashboardWidget(),
-                              ),
-                            ),
-                          // 설정 화면
-                          if (_selectedIndex == 3)
-                            Expanded(
-                              flex: 3,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: SettingsWidget(),
-                              ),
-                            ),
-
-                          // 우측 빈 공간 (레이아웃 정렬용)
+                  ),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (_selectedIndex == 0)
                           Expanded(
-                            flex: 1,
+                            flex: 3,
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: Container(),
+                              child: yoloProvider.focusedCamera != null
+                                  ? _buildFocusedLayout(context, yoloProvider.focusedCamera!)
+                                  : CameraGrid(),
                             ),
                           ),
-                        ],
-                      ),
+                        if (_selectedIndex == 1)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: EventList(),
+                            ),
+                          ),
+                        if (_selectedIndex == 2)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: DashboardWidget(),
+                            ),
+                          ),
+                        if (_selectedIndex == 3)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: MapView(),
+                            ),
+                          ),
+                        if (_selectedIndex == 4)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: AnalyticsView(),
+                            ),
+                          ),
+                        if (_selectedIndex == 5)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: ManagementView(),
+                            ),
+                          ),
+                        if (_selectedIndex == 6)
+                          Expanded(
+                            flex: 3,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: SettingsWidget(),
+                            ),
+                          ),
+                        Expanded(
+                          flex: 1,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const AlarmDemoWidget(),
-            ],
+            ),
           ),
-          // 사람이 감지된 카메라가 있으면 팝업 오버레이로 확대 표시
-          // if (yoloProvider.focusedCamId != null)
-          //   Positioned.fill(
-          //     child: GestureDetector(
-          //       onTap: () => yoloProvider.clearFocus(),
-          //       child: Container(
-          //         color: Colors.black54,
-          //         child: Center(
-          //           child: Material(
-          //             elevation: 8,
-          //             borderRadius: BorderRadius.circular(12),
-          //             child: SizedBox(
-          //               width: 250,
-          //               height: calendarHeight,
-          //               child: SingleChildScrollView(
-          //                 child: TableCalendar(
-          //                   firstDay: DateTime.utc(2010),
-          //                   lastDay: DateTime.utc(2030),
-          //                   focusedDay: DateTime.now(),
-          //                   headerStyle: const HeaderStyle(
-          //                     formatButtonVisible: false,
-          //                     titleCentered: true,
-          //                   ),
-          //                   onDaySelected: (selectedDay, focusedDay) {
-          //                     setState(() => isCalendarOpen = false);
-          //                   },
-          //                 ),
-          //               ),
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
         ],
       ),
     );
   }
 
   /// CCTV 화면에서 포커스된 카메라가 있을 때의 레이아웃
-  Widget _buildMainContent(YoloProvider yoloProvider) {
-    if (_selectedIndex == 0) {
-      return Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: yoloProvider.focusedCamId != null
-            ? _buildFocusedLayout(context, yoloProvider.focusedCamId!)
-            : CameraGrid(),
-      );
-    }
-    return _selectedIndex == 1
-        ? EventList()
-        : const Center(child: Text('설정 화면'));
-  }
-
-  /// 사람 감지 시 중앙 확대, 나머지 카메라는 가장자리 배치
   Widget _buildFocusedLayout(BuildContext context, String focusedCamId) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -411,7 +456,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: Row(
                 children: List.generate(
                   3,
-                      (index) => Expanded(
+                  (index) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: CameraTile(roomName: '${400 + index}호'),
@@ -429,7 +474,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: Column(
                 children: List.generate(
                   3,
-                      (index) => Expanded(
+                  (index) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: CameraTile(roomName: '${403 + index}호'),
@@ -447,7 +492,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: Column(
                 children: List.generate(
                   3,
-                      (index) => Expanded(
+                  (index) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: CameraTile(roomName: '${406 + index}호'),
@@ -465,7 +510,7 @@ class _MainLayoutState extends State<MainLayout> {
               child: Row(
                 children: List.generate(
                   3,
-                      (index) => Expanded(
+                  (index) => Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(4.0),
                       child: CameraTile(roomName: '${409 + index}호'),
@@ -480,7 +525,7 @@ class _MainLayoutState extends State<MainLayout> {
                 width: centerWidth,
                 height: centerHeight,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.red, width: 3),
+                  border: Border.all(color: const Color(0xFFE53935), width: 3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: CameraTile(
@@ -498,15 +543,15 @@ class _MainLayoutState extends State<MainLayout> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFFE53935).withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '🚨 사람 탐지: $focusedCamId',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -515,6 +560,58 @@ class _MainLayoutState extends State<MainLayout> {
           ],
         );
       },
+    );
+  }
+
+  // 시스템 상태 아이템 위젯
+  Widget _buildStatusItem(String label, String status) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: status == '정상' ? Colors.green[100] : Colors.red[100],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                color: status == '정상' ? Colors.green[800] : Colors.red[800],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 시스템 상태 다이얼로그
+  void _showSystemStatusDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('시스템 상태'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStatusItem('서버', _systemStatus['서버']!),
+            _buildStatusItem('네트워크', _systemStatus['네트워크']!),
+            _buildStatusItem('카메라', _systemStatus['카메라']!),
+            _buildStatusItem('저장공간', _systemStatus['저장공간']!),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
     );
   }
 }
