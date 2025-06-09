@@ -4,19 +4,18 @@ import 'package:provider/provider.dart';
 import 'providers/camera_provider.dart';
 import 'providers/yolo_provider.dart';
 import 'screens/main_layout.dart';
+import 'theme_provider.dart';
 
 void main() {
   runApp(
     Portal(
       child: MultiProvider(
         providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
           ChangeNotifierProvider(create: (_) => CameraProvider()),
           ChangeNotifierProvider(create: (_) => YoloProvider()),
         ],
-        child: MaterialApp(
-          home: MainLayout(),
-          debugShowCheckedModeBanner: false,
-        ),
+        child: const MyApp(),
       ),
     ),
   );
@@ -27,14 +26,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CCTV Monitoring',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        useMaterial3: true,
-      ),
-      home: const MainLayout(),
-      debugShowCheckedModeBanner: false,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          title: 'CCTV Monitoring',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+            useMaterial3: true,
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blueGrey,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+            brightness: Brightness.dark,
+          ),
+          themeMode: themeProvider.themeMode,
+          home: const MainLayout(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }

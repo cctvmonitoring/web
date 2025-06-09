@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme_provider.dart';
 
 class SettingsWidget extends StatefulWidget {
   const SettingsWidget({Key? key}) : super(key: key);
@@ -14,6 +16,8 @@ class _SettingsWidgetState extends State<SettingsWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('설정'),
@@ -49,6 +53,12 @@ class _SettingsWidgetState extends State<SettingsWidget> {
               onChanged: (String? value) {
                 setState(() {
                   _selectedTheme = value!;
+                  // 실제 테마 변경
+                  if (_selectedTheme == 'Light') {
+                    themeProvider.setThemeMode(ThemeMode.light);
+                  } else {
+                    themeProvider.setThemeMode(ThemeMode.dark);
+                  }
                 });
               },
             ),
