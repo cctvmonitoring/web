@@ -7,6 +7,12 @@ import 'screens/main_layout.dart';
 import 'theme_provider.dart';
 
 void main() {
+  // 전역 에러 핸들링 설정
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint(details.toString());
+  };
+
   runApp(
     Portal(
       child: MultiProvider(
@@ -46,6 +52,12 @@ class MyApp extends StatelessWidget {
           themeMode: themeProvider.themeMode,
           home: const MainLayout(),
           debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+              child: child!,
+            );
+          },
         );
       },
     );

@@ -13,6 +13,7 @@ import '../widgets/alarm_demo_widget.dart';
 import '../widgets/map_view.dart';
 import '../widgets/analytics_view.dart';
 import '../widgets/management_view.dart';
+import 'video_stream_page.dart';
 
 /// CCTV 메인 레이아웃 화면 (NavigationRail + 메인 컨텐츠)
 class MainLayout extends StatefulWidget {
@@ -433,134 +434,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   /// CCTV 화면에서 포커스된 카메라가 있을 때의 레이아웃
   Widget _buildFocusedLayout(BuildContext context, String focusedCamId) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double width = constraints.maxWidth;
-        double height = constraints.maxHeight;
-
-        double centerWidth = width * 0.6;
-        double centerHeight = height * 0.6;
-        double sideWidth = width * 0.18;
-        double sideHeight = centerHeight;
-        double topBottomWidth = centerWidth;
-        double topBottomHeight = height * 0.18;
-
-        return Stack(
-          children: [
-            // 상단 카메라들
-            Positioned(
-              top: 0,
-              left: (width - topBottomWidth) / 2,
-              width: topBottomWidth,
-              height: topBottomHeight,
-              child: Row(
-                children: List.generate(
-                  3,
-                  (index) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: CameraTile(roomName: '${400 + index}호'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // 좌측 카메라들
-            Positioned(
-              top: topBottomHeight + 8,
-              left: 0,
-              width: sideWidth,
-              height: sideHeight,
-              child: Column(
-                children: List.generate(
-                  3,
-                  (index) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: CameraTile(roomName: '${403 + index}호'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // 우측 카메라들
-            Positioned(
-              top: topBottomHeight + 8,
-              right: 0,
-              width: sideWidth,
-              height: sideHeight,
-              child: Column(
-                children: List.generate(
-                  3,
-                  (index) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: CameraTile(roomName: '${406 + index}호'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // 하단 카메라들
-            Positioned(
-              bottom: 0,
-              left: (width - topBottomWidth) / 2,
-              width: topBottomWidth,
-              height: topBottomHeight,
-              child: Row(
-                children: List.generate(
-                  3,
-                  (index) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: CameraTile(roomName: '${409 + index}호'),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            // 중앙 확대 카메라 (사람 감지)
-            Center(
-              child: Container(
-                width: centerWidth,
-                height: centerHeight,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFFE53935), width: 3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: CameraTile(
-                  roomName: focusedCamId,
-                  isAlert: true,
-                ),
-              ),
-            ),
-            // 상단 알림 라벨
-            Positioned(
-              top: 20,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE53935).withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '🚨 사람 탐지: $focusedCamId',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    return const MultiStreamPage();
   }
 
   // 시스템 상태 아이템 위젯
