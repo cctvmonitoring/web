@@ -107,25 +107,45 @@ class _MultiStreamPageState extends State<MultiStreamPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 감지 중 우선 정렬
+    final streamIndexes = List.generate(streamCount, (i) => i)
+      ..sort((a, b) {
+          final aActive = _connectedList[a] && _images[a] != null;
+          final bActive = _connectedList[b] && _images[b] != null;
+          return (bActive ? 1 : 0) - (aActive ? 1 : 0); // ✅ true 먼저 정렬
+        });
+
     return Scaffold(
-      backgroundColor: Colors.transparent, // ✅ 배경 투명 처리
-      body: GridView.builder(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(8),
-        itemCount: streamCount,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          childAspectRatio: 16 / 9,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: streamIndexes.map((index) {
+            final connected = _connectedList[index];
+            final hasImage = _images[index] != null;
+            final hasDetection = _boxesList[index].isNotEmpty;
+
+            // 감지된 경우에만 크게 보이게
+            final isActive = connected && hasImage && hasDetection;
+
+            final width = isActive ? 400.0 : 200.0;
+            final height = width * 9 / 16;
+
+            return SizedBox(
+              width: width,
+              height: height,
+              child: SingleStreamWidget(
+                imageData: _images[index],
+                boxes: _boxesList[index],
+                connected: connected,
+              ),
+            );
+          }).toList(),
         ),
-        itemBuilder: (_, index) {
-          return SingleStreamWidget(
-            imageData: _images[index], // ✅ 수정된 부분
-            boxes: _boxesList[index],
-            connected: _connectedList[index],
-          );
-        },
       ),
     );
   }
+
 }
