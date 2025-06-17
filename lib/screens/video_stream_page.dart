@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../core/detection_box.dart';
 import '../services/socket_service.dart';
 import '../widgets/single_stream_widget.dart';
@@ -26,12 +27,16 @@ class _MultiStreamPageState extends State<MultiStreamPage> {
     _socketService = SocketService(
       onDataReceived: (image, boxes, connected, streamId) {
         final index = _streamNameToIndex(streamId);
-        if (index == -1) return;
+        if (index == -1) {
+        print("❌ 인덱스 변환 실패: streamId=$streamId → 위젯 렌더링 안 됨");
+        return;
+        }
 
         setState(() {
           _images[index] = image;
           _boxesList[index] = boxes;
           _connectedList[index] = connected;
+          print("✅ 데이터 전달: image=${image?.length}, boxes=${boxes.length}, connected=$connected, streamId=$streamId");
         });
       },
     );
@@ -45,12 +50,59 @@ class _MultiStreamPageState extends State<MultiStreamPage> {
   }
 
   int _streamNameToIndex(String name) {
+    //print("📡 수신된 streamId: $name");
     final match = RegExp(r'stream(\d+)').firstMatch(name);
     if (match != null) {
       final n = int.parse(match.group(1)!);
+      //print("🔢 streamId $name → index ${n - 1}");
       return (n - 1).clamp(0, streamCount - 1);
     }
+    print("❌ streamId 변환 실패: $name");
     return -1;
+  }
+
+  void _handleStream(dynamic data, String streamId) {
+    try {
+      final decoded = data;
+      print("📦 [${streamId}] 수신된 데이터: $decoded");
+
+      final imageBytes = base64Decode(decoded['image']);
+      print("📥 [${streamId}] 디코딩된 이미지 길이: ${imageBytes.length}");
+
+      final detections = <DetectionBox>[];
+      for (var det in decoded['detections']) {
+        final rect = Rect.fromLTRB(
+          det['bbox'][0].toDouble(),
+          det['bbox'][1].toDouble(),
+          det['bbox'][2].toDouble(),
+          det['bbox'][3].toDouble(),
+        );
+        detections.add(
+          DetectionBox(det['class_id'], det['confidence'].toDouble(), rect),
+        );
+      }
+      print("📥 [${streamId}] 디텍션 수: ${detections.length}");
+
+      onDataReceived(imageBytes, detections, true, streamId);
+    } catch (e) {
+      print("❌ 데이터 처리 실패: $e");
+      onDataReceived(null, [], false, streamId);
+    }
+  }
+
+  void onDataReceived(Uint8List? image, List<DetectionBox> boxes, bool connected, String streamId) {
+    final index = _streamNameToIndex(streamId);
+    if (index == -1) {
+      print("❌ 인덱스 변환 실패: streamId=$streamId → 위젯 렌더링 안 됨");
+      return;
+    }
+
+    setState(() {
+      _images[index] = image;
+      _boxesList[index] = boxes;
+      _connectedList[index] = connected;
+      print("✅ 데이터 전달: image=${image?.length}, boxes=${boxes.length}, connected=$connected, streamId=$streamId");
+    });
   }
 
   @override
@@ -68,7 +120,7 @@ class _MultiStreamPageState extends State<MultiStreamPage> {
         ),
         itemBuilder: (_, index) {
           return SingleStreamWidget(
-            imageData: _images[index],
+            imageData: _images[index], // ✅ 수정된 부분
             boxes: _boxesList[index],
             connected: _connectedList[index],
           );

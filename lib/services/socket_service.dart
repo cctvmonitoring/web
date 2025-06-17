@@ -42,8 +42,9 @@ class SocketService {
     try {
       final decoded = data;
       final imageBytes = base64Decode(decoded['image']);
+      print("📥 [${streamId}] 이미지 길이: ${decoded['image']?.length}, 디텍션 수: ${decoded['detections'].length}");
       final detections = <DetectionBox>[];
-
+      //print("📦 [${streamId}] 수신된 데이터: $data");
       for (var det in decoded['detections']) {
         final rect = Rect.fromLTRB(
           det['bbox'][0].toDouble(),

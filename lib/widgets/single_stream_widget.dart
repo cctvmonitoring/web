@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../core/detection_box.dart';
-import 'detection_overlay.dart';
+import '../widgets/detection_overlay.dart';
+import 'dart:convert';
 
 class SingleStreamWidget extends StatelessWidget {
   final Uint8List? imageData;
@@ -19,6 +20,7 @@ class SingleStreamWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     const originalWidth = 1920.0;
     const originalHeight = 1080.0;
+    print("🖼️ 위젯 렌더링 시작: imageData=${imageData?.length}, connected=$connected");
 
     return AspectRatio(
       aspectRatio: 16 / 9,
@@ -58,4 +60,5 @@ class SingleStreamWidget extends StatelessWidget {
             ),
     );
   }
-} 
+}
+
