@@ -140,3 +140,84 @@
 // http.listen(PORT, '0.0.0.0', () => {
 //   console.log(`✅ Node.js server running on port ${PORT}`);
 // });
+
+
+const express = require('express');
+const app = express();
+const http = require('http').createServer(app);
+
+// 🔧 pingInterval & pingTimeout 늘리기
+const io = require('socket.io')(http, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  pingInterval: 10000, // 10초마다 ping
+  pingTimeout: 20000   // 20초 안에 pong 없으면 끊음
+});
+
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 5000 });  // YOLO 서버와 WebSocket 연결
+
+app.use(express.static('public'));
+app.get('/', (req, res) => {
+  res.send('CCTV Backend Server is running');
+});
+
+// ✅ WebSocket(YOLO ↔ Node.js)
+wss.on('connection', function connection(ws) {
+  console.log('[WebSocket] YOLO Server connected');
+
+  let lastSent = {};
+  const intervalMs = 100; // 전송 간격 제한 (최대 10fps)
+
+  ws.on('message', function incoming(data) {
+    try {
+      const parsed = JSON.parse(data.toString());
+      const streamName = parsed.stream_name || 'unknown';
+
+      const now = Date.now();
+      if (!lastSent[streamName] || now - lastSent[streamName] > intervalMs) {
+        lastSent[streamName] = now;
+        io.emit(streamName, parsed); // 각 streamName별로 전송
+        // console.log(`[WebSocket] Data sent for stream: ${streamName}`);
+        // // 필요시 콘솔에 parsed 내용 출력 
+        // console.log(`[WebSocket] Data for ${streamName}:`, parsed);
+ 
+        // console.log(parsed);
+      }
+    } catch (e) {
+      console.error('[WebSocket] JSON 처리 실패:', e);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('[WebSocket] YOLO Server disconnected');
+  });
+
+  ws.on('error', (err) => {
+    console.error('[WebSocket] Error:', err);
+  });
+});
+
+// ✅ Socket.IO (Flutter ↔ Node.js)
+io.on('connection', (socket) => {
+  console.log('[Socket.IO] Flutter client connected');
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[Socket.IO] Flutter client disconnected: ${reason}`);
+  });
+
+  socket.on('connect_error', (err) => {
+    console.error('[Socket.IO] Connect error:', err.message);
+  });
+
+  socket.on('connect_timeout', () => {
+    console.warn('[Socket.IO] Connect timeout');
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Node.js server running on port ${PORT}`);
+});
