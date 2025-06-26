@@ -28,6 +28,8 @@ dependencies:
   flutter_portal: ^1.1.4
   fl_chart: ^0.65.0
   socket_io_client: ^2.0.2
+  video_player: ^2.10.0
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:

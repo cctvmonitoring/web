@@ -145,6 +145,9 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
+const fs = require('fs');
+const path = require('path');
+const { Client } = require('ssh2');
 
 // 🔧 pingInterval & pingTimeout 늘리기
 const io = require('socket.io')(http, {
@@ -157,12 +160,132 @@ const io = require('socket.io')(http, {
 });
 
 const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 5000 });  // YOLO 서버와 WebSocket 연결
+const wss = new WebSocket.Server({ port: 5001 });  // YOLO 서버와 WebSocket 연결 (포트 변경)
+
+// 📹 서버 컴퓨터 접속 정보
+const SERVER_CONFIG = {
+  host: '192.168.1.39',
+  username: 'syu',
+  password: 'syucoup',
+  // privateKey: require('fs').readFileSync('/path/to/private/key') // SSH 키 사용 시
+};
+
+const REMOTE_VIDEO_PATH = '/home/syu/detection_video/';
+
+// CORS 설정 - 웹에서 API 호출 허용
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
+// CORS 설정 - 웹에서 API 호출 허용
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
 
 app.use(express.static('public'));
+app.use(express.json());
+
 app.get('/', (req, res) => {
   res.send('CCTV Backend Server is running');
 });
+
+// 📹 SSH를 통한 원격 파일 목록 조회
+function getRemoteVideoList() {
+  return new Promise((resolve, reject) => {
+    const conn = new Client();
+
+    conn.on('ready', () => {
+      console.log('SSH connection established');
+
+      // 원격 디렉토리의 파일 목록 조회
+      conn.exec(`find ${REMOTE_VIDEO_PATH} -name "recv_*.mp4" -type f -exec stat -c "%n|%s|%Y" {} \\;`, (err, stream) => {
+        if (err) {
+          conn.end();
+          return reject(err);
+        }
+
+        let output = '';
+        stream.on('data', (data) => {
+          output += data.toString();
+        });
+
+        stream.on('close', () => {
+          conn.end();
+
+          try {
+            const files = output.trim().split('\n')
+              .filter(line => line.length > 0)
+              .map(line => {
+                const [fullPath, size, mtime] = line.split('|');
+                const filename = path.basename(fullPath);
+                const modifiedDate = new Date(parseInt(mtime) * 1000);
+
+                return {
+                  filename: filename,
+                  size: parseInt(size),
+                  created: modifiedDate,
+                  modified: modifiedDate,
+                  url: `/videos/${filename}`
+                };
+              })
+              .sort((a, b) => new Date(b.created) - new Date(a.created));
+
+            resolve(files);
+          } catch (parseError) {
+            reject(parseError);
+          }
+        });
+      });
+    });
+
+    conn.on('error', (err) => {
+      reject(err);
+    });
+
+    conn.connect(SERVER_CONFIG);
+  });
+}
+
+// 📹 영상 목록 조회 API - SSH를 통한 원격 접근
+app.get('/api/videos', async (req, res) => {
+  try {
+    const files = await getRemoteVideoList();
+    res.json({ videos: files });
+  } catch (error) {
+    console.error('Error reading remote video directory:', error);
+
+    // SSH 연결 실패 시 임시 테스트 데이터 반환
+    const testFiles = [
+      {
+        filename: 'recv_20250626_143000.mp4',
+        size: 15728640,
+        created: new Date('2025-06-26T14:30:00'),
+        modified: new Date('2025-06-26T14:30:00'),
+        url: '/videos/recv_20250626_143000.mp4'
+      },
+      {
+        filename: 'recv_20250626_120000.mp4',
+        size: 25165824,
+        created: new Date('2025-06-26T12:00:00'),
+        modified: new Date('2025-06-26T12:00:00'),
+        url: '/videos/recv_20250626_120000.mp4'
+      }
+    ];
+
+    console.log('SSH 연결 실패 - 테스트 데이터 반환');
+    res.json({ videos: testFiles });
+  }
+});
+
+// 📹 영상 파일 스트리밍 - SSH를 통한 원격 파일 스트리밍
+// 실제 스트리밍은 별도 구현 필요 (현재는 파일 목록만 조회)
+// app.use('/videos', express.static(REMOTE_VIDEO_PATH)); // 로컬 파일이 아니므로 주석 처리
 
 // ✅ WebSocket(YOLO ↔ Node.js)
 wss.on('connection', function connection(ws) {
@@ -217,7 +340,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // 포트 변경
 http.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Node.js server running on port ${PORT}`);
 });

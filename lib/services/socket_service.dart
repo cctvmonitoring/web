@@ -13,7 +13,7 @@ class SocketService {
   SocketService({required this.onDataReceived});
 
   void connect() {
-    final url = 'http://192.168.1.10:3000'; // 하나의 포트만 사용
+    final url = 'http://localhost:3001'; // 현재 컴퓨터에서 실행
 
     _socket = IO.io(url, <String, dynamic>{
       'transports': ['websocket'],

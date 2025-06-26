@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../screens/video_stream_page.dart';
+import '../screens/recorded_videos_screen.dart';
 // import '../providers/yolo_provider.dart'; // ❌ 더 이상 필요하지 않음
 import '../widgets/camera_grid.dart';
 import '../widgets/event_list.dart';
@@ -74,16 +75,18 @@ class _MainLayoutState extends State<MainLayout> {
       case 0:
         return const MultiStreamPage(); // ✅ CCTV 스트림
       case 1:
-        return EventList();
+        return const RecordedVideosScreen(); // ✅ 녹화영상
       case 2:
-        return const DashboardWidget();
+        return EventList();
       case 3:
-        return const MapView();
+        return const DashboardWidget();
       case 4:
-        return const AnalyticsView();
+        return const MapView();
       case 5:
-        return const ManagementView();
+        return const AnalyticsView();
       case 6:
+        return const ManagementView();
+      case 7:
         return const SettingsWidget();
       default:
         return const SizedBox();
@@ -110,6 +113,11 @@ class _MainLayoutState extends State<MainLayout> {
                 icon: Icon(Icons.videocam_outlined, color: Colors.grey),
                 selectedIcon: Icon(Icons.videocam, color: Colors.white),
                 label: Text('CCTV', style: TextStyle(color: Colors.white)),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.video_library_outlined, color: Colors.grey),
+                selectedIcon: Icon(Icons.video_library, color: Colors.white),
+                label: Text('녹화영상', style: TextStyle(color: Colors.white)),
               ),
                NavigationRailDestination(
                  icon: Icon(Icons.notifications_outlined, color: Colors.grey),
