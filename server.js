@@ -176,6 +176,14 @@ const REMOTE_VIDEO_PATH = '/home/syu/detection_video/video/'; // ← 기존: '/h
 // [변경] 네트워크 드라이브 경로 (윈도우에서 Z: 드라이브로 마운트했다고 가정)
 const VIDEO_DIR = 'Z:\\'; // 또는 'Z:\\' (윈도우 경로)
 
+// [디버깅] 서버 시작 시 Z: 드라이브 파일 목록 출력
+try {
+  const files = fs.readdirSync(VIDEO_DIR);
+  console.log('[서버 시작] Z: 드라이브 파일 목록:', files);
+} catch (err) {
+  console.error('[서버 시작] Z: 드라이브 접근 오류:', err);
+}
+
 // CORS 설정 - 웹에서 API 호출 허용
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -201,11 +209,12 @@ app.get('/', (req, res) => {
 
 // [추가] 네트워크 드라이브에서 영상 파일 목록을 읽는 함수
 function getLocalVideoList() {
-  const fs = require('fs');
-  const path = require('path');
   try {
-    const files = fs.readdirSync(VIDEO_DIR)
-      .filter(file => file.endsWith('.mp4') && file.startsWith('rec-'))
+    const files = fs.readdirSync(VIDEO_DIR);
+    console.log('[API 호출] Z: 드라이브 파일 목록:', files); // 추가
+    const filtered = files.filter(file => file.endsWith('.mp4') && file.startsWith('rec-'));
+    console.log('[API 호출] 필터링된 파일 목록:', filtered); // 추가
+    return filtered
       .map(file => {
         const stat = fs.statSync(path.join(VIDEO_DIR, file));
         return {
@@ -217,20 +226,37 @@ function getLocalVideoList() {
         };
       })
       .sort((a, b) => b.created - a.created);
-    return files;
   } catch (err) {
     console.error('[영상 목록 읽기 오류]', err);
     return [];
   }
 }
 
-// [변경] /api/videos 라우트 - 네트워크 드라이브에서 영상 목록 반환
+// [개선] null/undefined 방지: filter로 폴더 또는 mp4 파일만 남기고 map 적용
 app.get('/api/videos', (req, res) => {
+  const relPath = req.query.path || '';
+  const absPath = path.join(VIDEO_DIR, relPath);
+
   try {
-    const files = getLocalVideoList();
-    res.json({ videos: files });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to read video directory' });
+    const list = fs.readdirSync(absPath, { withFileTypes: true });
+    const result = list
+      .filter(item => item && (item.isDirectory() || (item.isFile() && item.name.endsWith('.mp4'))))
+      .map(item => {
+        if (item.isDirectory()) {
+          return { name: item.name, type: 'directory' };
+        } else if (item.isFile() && item.name.endsWith('.mp4')) {
+          return {
+            name: item.name,
+            type: 'file',
+            size: fs.statSync(path.join(absPath, item.name)).size,
+            url: `/videos/${relPath ? relPath.replace(/\\/g, '/') + '/' : ''}${item.name}`
+          };
+        }
+      });
+    res.json({ videos: result });
+  } catch (err) {
+    console.error('[폴더 목록 읽기 오류]', err);
+    res.status(500).json({ error: '폴더를 읽을 수 없습니다.' });
   }
 });
 
@@ -238,7 +264,7 @@ app.get('/api/videos', (req, res) => {
 // 실제 스트리밍은 별도 구현 필요 (현재는 파일 목록만 조회)
 // app.use('/videos', express.static(REMOTE_VIDEO_PATH)); // 로컬 파일이 아니므로 주석 처리
 
-// [추가] /videos/:filename 정적 파일 서빙 (영상 스트리밍)
+// 정적 파일 서빙 (폴더 구조 반영)
 app.use('/videos', express.static(VIDEO_DIR));
 
 // ✅ WebSocket(YOLO ↔ Node.js)

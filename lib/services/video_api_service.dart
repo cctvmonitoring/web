@@ -9,12 +9,15 @@ class VideoApiService {
   // 서버 URL - constants.dart에서 IP 주소 가져옴
   static const String baseUrl = nodeServerUrl; // 'http://192.168.1.10:3000'
   
-  /// 서버에서 녹화된 영상 목록 조회
-  /// GET /api/videos 호출하여 recv_*.mp4 파일 목록 반환
-  static Future<List<RecordedVideo>> getRecordedVideos() async {
+  /// 서버에서 녹화된 영상 및 폴더 목록 조회 (폴더 브라우저 지원)
+  /// GET /api/videos 호출하여 폴더/파일 혼합 목록 반환
+  static Future<List<dynamic>> getRecordedVideos({String? path}) async {
     try {
+      final uri = path == null
+        ? Uri.parse('$baseUrl/api/videos')
+        : Uri.parse('$baseUrl/api/videos?path=$path');
       final response = await http.get(
-        Uri.parse('$baseUrl/api/videos'),
+        uri,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -24,12 +27,19 @@ class VideoApiService {
         final data = json.decode(response.body);
         final videosJson = data['videos'] as List;
 
-        // JSON 데이터를 RecordedVideo 객체로 변환
-        return videosJson
-            .map((videoJson) => RecordedVideo.fromJson(videoJson))
-            .toList();
+        // 폴더/파일 분기 처리
+        return videosJson.map((item) {
+          if (item['type'] == 'file') {
+            return RecordedVideo.fromJson(item);
+          } else if (item['type'] == 'directory') {
+            // 폴더는 Map 그대로 반환 (추후 FolderItem 모델화 가능)
+            return item;
+          } else {
+            return null;
+          }
+        }).where((e) => e != null).toList();
       } else {
-        throw Exception('Failed to load videos: ${response.statusCode}');
+        throw Exception('Failed to load videos: \\${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching videos: $e');

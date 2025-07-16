@@ -11,12 +11,13 @@ class RecordedVideosScreen extends StatefulWidget {
 }
 
 class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
-  List<RecordedVideo> _videos = [];
-  List<RecordedVideo> _filteredVideos = [];
+  List<dynamic> _videos = [];
+  List<dynamic> _filteredVideos = [];
   bool _isLoading = true;
   String _errorMessage = '';
   String _searchQuery = '';
   DateTime? _selectedDate;
+  String _currentPath = '';
 
   @override
   void initState() {
@@ -24,18 +25,19 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
     _loadVideos();
   }
 
-  Future<void> _loadVideos() async {
+  Future<void> _loadVideos({String? path}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      final videos = await VideoApiService.getRecordedVideos();
+      final videos = await VideoApiService.getRecordedVideos(path: path);
       setState(() {
         _videos = videos;
         _filteredVideos = videos;
         _isLoading = false;
+        _currentPath = path ?? '';
       });
     } catch (e) {
       setState(() {
@@ -46,18 +48,30 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
   }
 
   void _filterVideos() {
-    List<RecordedVideo> filtered = _videos;
-
-    // 날짜 필터링
-    if (_selectedDate != null) {
-      filtered = VideoApiService.filterVideosByDate(filtered, _selectedDate!);
+    List<dynamic> filtered = _videos;
+    // 파일만 필터링 적용 (폴더는 항상 노출)
+    if (_selectedDate != null || _searchQuery.isNotEmpty) {
+      filtered = _videos.where((item) {
+        if (item is RecordedVideo) {
+          bool dateMatch = true;
+          if (_selectedDate != null) {
+            final recordedDate = item.recordedDateTime;
+            if (recordedDate != null) {
+              dateMatch = recordedDate.year == _selectedDate!.year &&
+                          recordedDate.month == _selectedDate!.month &&
+                          recordedDate.day == _selectedDate!.day;
+            } else {
+              dateMatch = false;
+            }
+          }
+          bool searchMatch = _searchQuery.isEmpty ||
+            item.filename.toLowerCase().contains(_searchQuery.toLowerCase());
+          return dateMatch && searchMatch;
+        }
+        // 폴더는 항상 노출
+        return item is Map && item['type'] == 'directory';
+      }).toList();
     }
-
-    // 검색어 필터링
-    if (_searchQuery.isNotEmpty) {
-      filtered = VideoApiService.searchVideosByFilename(filtered, _searchQuery);
-    }
-
     setState(() {
       _filteredVideos = filtered;
     });
@@ -94,6 +108,13 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
       ),
     );
   }
+
+  void _enterFolder(String folderName) {
+    final newPath = _currentPath.isEmpty ? folderName : '$_currentPath/$folderName';
+    _loadVideos(path: newPath);
+  }
+
+  bool get _isRoot => _currentPath.isEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -250,10 +271,34 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredVideos.length,
+      itemCount: _filteredVideos.length + (_isRoot ? 0 : 1),
       itemBuilder: (context, index) {
-        final video = _filteredVideos[index];
-        return _buildVideoCard(video);
+        // 상위 폴더로 이동 버튼
+        if (!_isRoot && index == 0) {
+          return ListTile(
+            leading: const Icon(Icons.arrow_upward, color: Colors.white),
+            title: const Text('상위 폴더로', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              final parts = _currentPath.split('/');
+              parts.removeLast();
+              final parentPath = parts.join('/');
+              _loadVideos(path: parentPath.isEmpty ? null : parentPath);
+            },
+          );
+        }
+        final realIndex = _isRoot ? index : index - 1;
+        final item = _filteredVideos[realIndex];
+        if (item is RecordedVideo) {
+          return _buildVideoCard(item);
+        } else if (item is Map && item['type'] == 'directory') {
+          return ListTile(
+            leading: const Icon(Icons.folder, color: Colors.amber),
+            title: Text(item['name'], style: const TextStyle(color: Colors.white)),
+            onTap: () => _enterFolder(item['name']),
+          );
+        } else {
+          return const SizedBox.shrink();
+        }
       },
     );
   }
