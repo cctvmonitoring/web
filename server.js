@@ -170,7 +170,11 @@ const SERVER_CONFIG = {
   // privateKey: require('fs').readFileSync('/path/to/private/key') // SSH 키 사용 시
 };
 
-const REMOTE_VIDEO_PATH = '/home/syu/detection_video/';
+// [수정] 실제 영상 폴더 경로로 변경
+const REMOTE_VIDEO_PATH = '/home/syu/detection_video/video/'; // ← 기존: '/home/syu/detection_video/'
+
+// [변경] 네트워크 드라이브 경로 (윈도우에서 Z: 드라이브로 마운트했다고 가정)
+const VIDEO_DIR = 'Z:\\'; // 또는 'Z:\\' (윈도우 경로)
 
 // CORS 설정 - 웹에서 API 호출 허용
 app.use((req, res, next) => {
@@ -195,97 +199,47 @@ app.get('/', (req, res) => {
   res.send('CCTV Backend Server is running');
 });
 
-// 📹 SSH를 통한 원격 파일 목록 조회
-function getRemoteVideoList() {
-  return new Promise((resolve, reject) => {
-    const conn = new Client();
-
-    conn.on('ready', () => {
-      console.log('SSH connection established');
-
-      // 원격 디렉토리의 파일 목록 조회
-      conn.exec(`find ${REMOTE_VIDEO_PATH} -name "recv_*.mp4" -type f -exec stat -c "%n|%s|%Y" {} \\;`, (err, stream) => {
-        if (err) {
-          conn.end();
-          return reject(err);
-        }
-
-        let output = '';
-        stream.on('data', (data) => {
-          output += data.toString();
-        });
-
-        stream.on('close', () => {
-          conn.end();
-
-          try {
-            const files = output.trim().split('\n')
-              .filter(line => line.length > 0)
-              .map(line => {
-                const [fullPath, size, mtime] = line.split('|');
-                const filename = path.basename(fullPath);
-                const modifiedDate = new Date(parseInt(mtime) * 1000);
-
-                return {
-                  filename: filename,
-                  size: parseInt(size),
-                  created: modifiedDate,
-                  modified: modifiedDate,
-                  url: `/videos/${filename}`
-                };
-              })
-              .sort((a, b) => new Date(b.created) - new Date(a.created));
-
-            resolve(files);
-          } catch (parseError) {
-            reject(parseError);
-          }
-        });
-      });
-    });
-
-    conn.on('error', (err) => {
-      reject(err);
-    });
-
-    conn.connect(SERVER_CONFIG);
-  });
+// [추가] 네트워크 드라이브에서 영상 파일 목록을 읽는 함수
+function getLocalVideoList() {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const files = fs.readdirSync(VIDEO_DIR)
+      .filter(file => file.endsWith('.mp4') && file.startsWith('rec-'))
+      .map(file => {
+        const stat = fs.statSync(path.join(VIDEO_DIR, file));
+        return {
+          filename: file,
+          size: stat.size,
+          created: stat.birthtime,
+          modified: stat.mtime,
+          url: `/videos/${file}`
+        };
+      })
+      .sort((a, b) => b.created - a.created);
+    return files;
+  } catch (err) {
+    console.error('[영상 목록 읽기 오류]', err);
+    return [];
+  }
 }
 
-// 📹 영상 목록 조회 API - SSH를 통한 원격 접근
-app.get('/api/videos', async (req, res) => {
+// [변경] /api/videos 라우트 - 네트워크 드라이브에서 영상 목록 반환
+app.get('/api/videos', (req, res) => {
   try {
-    const files = await getRemoteVideoList();
+    const files = getLocalVideoList();
     res.json({ videos: files });
   } catch (error) {
-    console.error('Error reading remote video directory:', error);
-
-    // SSH 연결 실패 시 임시 테스트 데이터 반환
-    const testFiles = [
-      {
-        filename: 'recv_20250626_143000.mp4',
-        size: 15728640,
-        created: new Date('2025-06-26T14:30:00'),
-        modified: new Date('2025-06-26T14:30:00'),
-        url: '/videos/recv_20250626_143000.mp4'
-      },
-      {
-        filename: 'recv_20250626_120000.mp4',
-        size: 25165824,
-        created: new Date('2025-06-26T12:00:00'),
-        modified: new Date('2025-06-26T12:00:00'),
-        url: '/videos/recv_20250626_120000.mp4'
-      }
-    ];
-
-    console.log('SSH 연결 실패 - 테스트 데이터 반환');
-    res.json({ videos: testFiles });
+    res.status(500).json({ error: 'Failed to read video directory' });
   }
 });
 
 // 📹 영상 파일 스트리밍 - SSH를 통한 원격 파일 스트리밍
 // 실제 스트리밍은 별도 구현 필요 (현재는 파일 목록만 조회)
 // app.use('/videos', express.static(REMOTE_VIDEO_PATH)); // 로컬 파일이 아니므로 주석 처리
+
+// [추가] /videos/:filename 정적 파일 서빙 (영상 스트리밍)
+app.use('/videos', express.static(VIDEO_DIR));
 
 // ✅ WebSocket(YOLO ↔ Node.js)
 wss.on('connection', function connection(ws) {
