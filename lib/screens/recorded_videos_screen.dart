@@ -18,26 +18,44 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
   String _searchQuery = '';
   DateTime? _selectedDate;
   String _currentPath = '';
+  int _offset = 0;
+  final int _limit = 100;
+  bool _hasMore = true;
 
   @override
   void initState() {
     super.initState();
-    _loadVideos();
+    _loadVideos(reset: true);
   }
 
-  Future<void> _loadVideos({String? path}) async {
+  Future<void> _loadVideos({String? path, bool reset = false}) async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      final videos = await VideoApiService.getRecordedVideos(path: path);
+      final offset = reset ? 0 : _offset;
+      final videos = await VideoApiService.getRecordedVideos(path: path ?? _currentPath, offset: offset, limit: _limit);
       setState(() {
-        _videos = videos;
-        _filteredVideos = videos;
+        if (reset) {
+          _videos = videos;
+        } else {
+          // 폴더는 항상 맨 위에, 파일만 append
+          final folders = videos.where((item) => item is Map && item['type'] == 'directory').toList();
+          final files = videos.where((item) => item is RecordedVideo).toList();
+          if (_offset == 0) {
+            _videos = [...folders, ...files];
+          } else {
+            // 폴더는 이미 있으므로 파일만 추가
+            _videos.addAll(files);
+          }
+        }
+        _filteredVideos = _videos;
         _isLoading = false;
-        _currentPath = path ?? '';
+        _currentPath = path ?? _currentPath;
+        _offset = offset + _limit;
+        _hasMore = videos.where((item) => item is RecordedVideo).length == _limit;
       });
     } catch (e) {
       setState(() {
@@ -109,9 +127,17 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
     );
   }
 
+  void _loadMore() {
+    _loadVideos(reset: false);
+  }
+
   void _enterFolder(String folderName) {
     final newPath = _currentPath.isEmpty ? folderName : '$_currentPath/$folderName';
-    _loadVideos(path: newPath);
+    setState(() {
+      _offset = 0;
+      _hasMore = true;
+    });
+    _loadVideos(path: newPath, reset: true);
   }
 
   bool get _isRoot => _currentPath.isEmpty;
@@ -214,6 +240,14 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
           Expanded(
             child: _buildVideoList(),
           ),
+         if (_hasMore && !_isLoading && _filteredVideos.any((item) => item is RecordedVideo))
+           Padding(
+             padding: const EdgeInsets.symmetric(vertical: 8),
+             child: ElevatedButton(
+               onPressed: _loadMore,
+               child: const Text('더 보기'),
+             ),
+           ),
         ],
       ),
     );

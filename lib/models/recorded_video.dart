@@ -17,10 +17,10 @@ class RecordedVideo {
 
   factory RecordedVideo.fromJson(Map<String, dynamic> json) {
     return RecordedVideo(
-      filename: json['filename'] as String,
+      filename: (json['filename'] ?? json['name']) as String,
       size: json['size'] as int,
-      created: DateTime.parse(json['created'] as String),
-      modified: DateTime.parse(json['modified'] as String),
+      created: json['created'] != null ? DateTime.parse(json['created'] as String) : DateTime.now(),
+      modified: json['modified'] != null ? DateTime.parse(json['modified'] as String) : DateTime.now(),
       url: json['url'] as String,
     );
   }

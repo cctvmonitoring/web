@@ -11,11 +11,11 @@ class VideoApiService {
   
   /// 서버에서 녹화된 영상 및 폴더 목록 조회 (폴더 브라우저 지원)
   /// GET /api/videos 호출하여 폴더/파일 혼합 목록 반환
-  static Future<List<dynamic>> getRecordedVideos({String? path}) async {
+  static Future<List<dynamic>> getRecordedVideos({String? path, int offset = 0, int limit = 100}) async {
     try {
       final uri = path == null
-        ? Uri.parse('$baseUrl/api/videos')
-        : Uri.parse('$baseUrl/api/videos?path=$path');
+        ? Uri.parse('$baseUrl/api/videos?offset=$offset&limit=$limit')
+        : Uri.parse('$baseUrl/api/videos?path=$path&offset=$offset&limit=$limit');
       final response = await http.get(
         uri,
         headers: {
@@ -27,17 +27,17 @@ class VideoApiService {
         final data = json.decode(response.body);
         final videosJson = data['videos'] as List;
 
-        // 폴더/파일 분기 처리
-        return videosJson.map((item) {
-          if (item['type'] == 'file') {
-            return RecordedVideo.fromJson(item);
-          } else if (item['type'] == 'directory') {
-            // 폴더는 Map 그대로 반환 (추후 FolderItem 모델화 가능)
-            return item;
-          } else {
-            return null;
-          }
-        }).where((e) => e != null).toList();
+        // 폴더/파일 분기 처리 (null 완전 제거)
+        return videosJson
+            .where((item) => item != null && (item['type'] == 'file' || item['type'] == 'directory'))
+            .map((item) {
+              if (item['type'] == 'file') {
+                return RecordedVideo.fromJson(item);
+              } else if (item['type'] == 'directory') {
+                return item;
+              }
+            })
+            .toList();
       } else {
         throw Exception('Failed to load videos: \\${response.statusCode}');
       }

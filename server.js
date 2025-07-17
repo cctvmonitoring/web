@@ -236,24 +236,29 @@ function getLocalVideoList() {
 app.get('/api/videos', (req, res) => {
   const relPath = req.query.path || '';
   const absPath = path.join(VIDEO_DIR, relPath);
+  const offset = parseInt(req.query.offset || '0', 10);
+  const limit = parseInt(req.query.limit || '100', 10);
 
   try {
     const list = fs.readdirSync(absPath, { withFileTypes: true });
-    const result = list
-      .filter(item => item && (item.isDirectory() || (item.isFile() && item.name.endsWith('.mp4'))))
+    // 폴더는 항상 모두 반환
+    const folders = list
+      .filter(item => item.isDirectory())
+      .map(item => ({ name: item.name, type: 'directory' }));
+    // 파일은 offset/limit 적용
+    const files = list
+      .filter(item => item.isFile() && item.name.endsWith('.mp4'))
+      .slice(offset, offset + limit)
       .map(item => {
-        if (item.isDirectory()) {
-          return { name: item.name, type: 'directory' };
-        } else if (item.isFile() && item.name.endsWith('.mp4')) {
-          return {
-            name: item.name,
-            type: 'file',
-            size: fs.statSync(path.join(absPath, item.name)).size,
-            url: `/videos/${relPath ? relPath.replace(/\\/g, '/') + '/' : ''}${item.name}`
-          };
-        }
+        const stat = fs.statSync(path.join(absPath, item.name));
+        return {
+          name: item.name,
+          type: 'file',
+          size: stat.size,
+          url: `/videos/${relPath ? relPath.replace(/\\/g, '/') + '/' : ''}${item.name}`
+        };
       });
-    res.json({ videos: result });
+    res.json({ videos: [...folders, ...files] });
   } catch (err) {
     console.error('[폴더 목록 읽기 오류]', err);
     res.status(500).json({ error: '폴더를 읽을 수 없습니다.' });
@@ -264,8 +269,11 @@ app.get('/api/videos', (req, res) => {
 // 실제 스트리밍은 별도 구현 필요 (현재는 파일 목록만 조회)
 // app.use('/videos', express.static(REMOTE_VIDEO_PATH)); // 로컬 파일이 아니므로 주석 처리
 
-// 정적 파일 서빙 (폴더 구조 반영)
-app.use('/videos', express.static(VIDEO_DIR));
+// [CORS 허용] /videos 정적 파일 서빙에 CORS 헤더 추가
+app.use('/videos', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(VIDEO_DIR));
 
 // ✅ WebSocket(YOLO ↔ Node.js)
 wss.on('connection', function connection(ws) {
