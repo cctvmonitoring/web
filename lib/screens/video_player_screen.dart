@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_player/video_player.dart';
+import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
 import '../models/recorded_video.dart';
 import '../services/video_api_service.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
   final RecordedVideo video;
+  final String currentPath;
 
-  const VideoPlayerScreen({super.key, required this.video});
+  const VideoPlayerScreen({super.key, required this.video, required this.currentPath});
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
@@ -18,17 +22,68 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _hasError = false;
   String _errorMessage = '';
   bool _showControls = true;
+  late html.VideoElement _webVideoElement;
+  String _webVideoViewType = '';
 
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
+    if (kIsWeb) {
+      _initializeWebVideo();
+    } else {
+      _initializeVideo();
+    }
   }
 
+  // 웹용 비디오 초기화
+  void _initializeWebVideo() {
+    final videoUrl = VideoApiService.getVideoUrl(widget.video.filename, path: widget.currentPath);
+    print('Loading web video from: $videoUrl');
+    
+    _webVideoViewType = 'video-${widget.video.filename}-${DateTime.now().millisecondsSinceEpoch}';
+    
+    _webVideoElement = html.VideoElement()
+      ..src = videoUrl
+      ..controls = true
+      ..autoplay = false
+      ..style.width = '100%'
+      ..style.height = '100%'
+      ..style.objectFit = 'contain'
+      ..style.backgroundColor = 'black';
+    
+    // 웹 비디오 이벤트 리스너
+    _webVideoElement.onLoadedData.listen((_) {
+      setState(() {
+        _isLoading = false;
+        _hasError = false;
+      });
+    });
+    
+    _webVideoElement.onError.listen((error) {
+      print('Web video error: $error');
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to load video. Please check the video format and server connection.';
+      });
+    });
+    
+    // HTML 요소를 Flutter에 등록
+    ui_web.platformViewRegistry.registerViewFactory(
+      _webVideoViewType,
+      (int viewId) => _webVideoElement,
+    );
+    
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  // 모바일용 비디오 초기화 (기존 방식)
   Future<void> _initializeVideo() async {
     try {
-      final videoUrl = VideoApiService.getVideoUrl(widget.video.filename);
-      print('Loading video from: $videoUrl'); // 디버깅용
+      final videoUrl = VideoApiService.getVideoUrl(widget.video.filename, path: widget.currentPath);
+      print('Loading video from: $videoUrl');
       
       _controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       
@@ -59,7 +114,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _togglePlayPause() {
-    if (_controller != null) {
+    if (kIsWeb) {
+      if (_webVideoElement.paused) {
+        _webVideoElement.play();
+      } else {
+        _webVideoElement.pause();
+      }
+    } else if (_controller != null) {
       setState(() {
         if (_controller!.value.isPlaying) {
           _controller!.pause();
@@ -71,7 +132,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   void _seekTo(Duration position) {
-    _controller?.seekTo(position);
+    if (kIsWeb) {
+      _webVideoElement.currentTime = position.inSeconds.toDouble();
+    } else {
+      _controller?.seekTo(position);
+    }
   }
 
   void _toggleControls() {
@@ -91,6 +156,32 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     } else {
       return '$minutes:$seconds';
     }
+  }
+
+  void _showVideoInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Video Information'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Filename: ${widget.video.filename}'),
+            Text('Size: ${widget.video.size}'),
+            Text('Created: ${widget.video.created}'),
+            if (widget.video.modified != null)
+              Text('Modified: ${widget.video.modified}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -156,7 +247,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   _isLoading = true;
                   _hasError = false;
                 });
-                _initializeVideo();
+                if (kIsWeb) {
+                  _initializeWebVideo();
+                } else {
+                  _initializeVideo();
+                }
               },
               child: const Text('다시 시도'),
             ),
@@ -165,6 +260,19 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       );
     }
 
+    // 웹에서는 HTML video 요소 사용
+    if (kIsWeb) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.black,
+        child: HtmlElementView(
+          viewType: _webVideoViewType,
+        ),
+      );
+    }
+
+    // 모바일에서는 기존 video_player 사용
     if (_controller == null || !_controller!.value.isInitialized) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.blue),
@@ -254,69 +362,5 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         ],
       ),
     );
-  }
-
-  void _showVideoInfo() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A2A),
-        title: const Text(
-          '영상 정보',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow('파일명', widget.video.filename),
-            _buildInfoRow('녹화일시', '${widget.video.recordedDateString} ${widget.video.recordedTimeString}'),
-            _buildInfoRow('영상ID', widget.video.videoId),
-            _buildInfoRow('크기', widget.video.formattedSize),
-            _buildInfoRow('파일생성일', _formatDateTime(widget.video.created)),
-            _buildInfoRow('파일수정일', _formatDateTime(widget.video.modified)),
-            if (_controller != null && _controller!.value.isInitialized) ...[
-              _buildInfoRow('해상도', '${_controller!.value.size.width.toInt()}x${_controller!.value.size.height.toInt()}'),
-              _buildInfoRow('재생시간', _formatDuration(_controller!.value.duration)),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기', style: TextStyle(color: Colors.blue)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
-           '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
   }
 }

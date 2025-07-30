@@ -39,7 +39,7 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
       final videos = await VideoApiService.getRecordedVideos(path: path ?? _currentPath, offset: offset, limit: _limit);
       setState(() {
         if (reset) {
-          _videos = videos;
+        _videos = videos;
         } else {
           // 폴더는 항상 맨 위에, 파일만 append
           final folders = videos.where((item) => item is Map && item['type'] == 'directory').toList();
@@ -72,7 +72,7 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
       filtered = _videos.where((item) {
         if (item is RecordedVideo) {
           bool dateMatch = true;
-          if (_selectedDate != null) {
+    if (_selectedDate != null) {
             final recordedDate = item.recordedDateTime;
             if (recordedDate != null) {
               dateMatch = recordedDate.year == _selectedDate!.year &&
@@ -122,7 +122,7 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => VideoPlayerScreen(video: video),
+        builder: (context) => VideoPlayerScreen(video: video, currentPath: _currentPath),
       ),
     );
   }
@@ -247,7 +247,7 @@ class _RecordedVideosScreenState extends State<RecordedVideosScreen> {
                onPressed: _loadMore,
                child: const Text('더 보기'),
              ),
-           ),
+          ),
         ],
       ),
     );

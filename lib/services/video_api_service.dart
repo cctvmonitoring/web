@@ -51,16 +51,18 @@ class VideoApiService {
 
   /// 영상 스트리밍 URL 생성
   /// 파일명을 받아서 웹에서 재생 가능한 전체 URL 반환
-  static String getVideoUrl(String filename) {
-    return '$baseUrl/videos/$filename';
+  static String getVideoUrl(String filename, {String? path}) {
+    // path가 null이거나 'root'인 경우 기본 경로(1) 사용
+    final videoPath = (path == null || path == 'root') ? '1' : path;
+    return '$baseUrl/videos/$videoPath/$filename';
   }
 
   /// 영상 파일 존재 여부 확인
   /// HEAD 요청으로 파일이 서버에 있는지 체크
-  static Future<bool> checkVideoExists(String filename) async {
+  static Future<bool> checkVideoExists(String filename, {String? path}) async {
     try {
       final response = await http.head(
-        Uri.parse(getVideoUrl(filename)),
+        Uri.parse(getVideoUrl(filename, path: path)),
       ).timeout(const Duration(seconds: 5)); // 5초 타임아웃
 
       return response.statusCode == 200;
